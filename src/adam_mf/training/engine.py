@@ -170,7 +170,7 @@ def run_training(cfg,run,identity,gpu_id):
         return result
     except StopRequested:
         raise
-    except BaseException as error:
+    except Exception as error:
         failure=dict(**cfg.values(),status='oom' if isinstance(error,torch.cuda.OutOfMemoryError) else 'non_finite' if isinstance(error,FloatingPointError) else 'failed',
                      error=f'{type(error).__name__}: {error}',traceback=traceback.format_exc(),identity=identity)
         atomic_json(output/f'failure_{time.time_ns()}.json',failure)

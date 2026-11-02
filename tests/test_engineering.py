@@ -61,15 +61,22 @@ def test_missing_gpu_never_falls_back():
     assert [g['id'] for g in selected_gpus(r,inventory+[dict(id=3),dict(id=9)])]==[0,1,2,3]
 
 
-def test_simulated_160_mixed_tasks_use_four_exclusive_gpus():
+def test_simulated_160_mixed_tasks_respect_family_capacity():
     c=load_config();jobs=plan(c)
     # Interleave task families to expose cross-family capacity bugs.
     jobs=jobs[::2]+jobs[1::2];mixed=[v for pair in zip(jobs[:80],jobs[80:]) for v in pair]
     result=simulation(c,mixed);active={};seen=set();completed=[]
     for e in result['events']:
         if e['event']=='start':
-            assert e['gpu'] not in active;active[e['gpu']]=e['job'];seen.add(e['gpu']);assert len(active)<=4
-        else:assert active.pop(e['gpu'])==e['job'];completed.append(e['job'])
+            occupants=active.setdefault(e['gpu'],[])
+            task=e['job'].split('__')[0]
+            assert all(j.split('__')[0]==task for j in occupants)
+            occupants.append(e['job']);seen.add(e['gpu'])
+            assert len(occupants)<=c['runtime'][task+'_workers_per_gpu']
+            assert sum(map(len,active.values()))<=4
+        else:
+            active[e['gpu']].remove(e['job']);completed.append(e['job'])
+            if not active[e['gpu']]:del active[e['gpu']]
     assert seen=={0,1,2,3} and len(set(completed))==160 and not active
 
 
@@ -202,5 +209,5 @@ def test_worker_refuses_unconfigured_physical_gpu(tmp_path,monkeypatch):
     monkeypatch.setenv('CUDA_VISIBLE_DEVICES','9')
     monkeypatch.setattr(sys,'argv',['worker','--run',str(tmp_path),'--job',job.id,'--gpu','9'])
     def identity(*_):raise AssertionError('Unconfigured GPU must be rejected before asset/model loading')
-    monkeypatch.setattr(worker,'check_identity',identity)
+    monkeypatch.setattr(worker,'worker_identity',identity)
     with pytest.raises(RuntimeError,match='not configured'):worker.main()

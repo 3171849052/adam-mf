@@ -71,9 +71,8 @@ methods:
 runtime:
   gpu_ids: [0, 1, 2, 3]
   cv_workers_per_gpu: 1
-  nlp_workers_per_gpu: 1
-  max_parallel_tasks: 4
-  max_tasks_per_gpu: 1
+  nlp_workers_per_gpu: 2
+  max_parallel_tasks: 8
   min_free_memory_mb: {cv: 10000, nlp: 5000}
   poll_seconds: 3
   resume: true

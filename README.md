@@ -54,9 +54,8 @@ export ADAM_MF_PYTHON="$(which python)"
 runtime:
   gpu_ids: [0, 1, 2, 3]
   cv_workers_per_gpu: 1
-  nlp_workers_per_gpu: 1
+  nlp_workers_per_gpu: 2
   max_parallel_tasks: 4
-  max_tasks_per_gpu: 1
   min_free_memory_mb: {cv: 10000, nlp: 5000}
   poll_seconds: 3
   resume: true
@@ -69,7 +68,7 @@ nvidia-smi --query-gpu=index,uuid,name,memory.total,memory.free --format=csv
 watch -n 3 nvidia-smi
 ```
 
-可修改 `gpu_ids` 中的物理编号并相应限制全局并发；指定的所有卡都必须存在。默认最多四个进程，每卡同时最多一个任务，CV 和 NLP 共享队列及 GPU 资源锁。卡空闲后自动补位，空闲显存不足就等待，不改变 batch size；`stop_on_error: true` 时失败会停止派发并通知其他 worker 在完整逻辑步保存检查点。
+可修改 `gpu_ids` 中的物理编号并相应限制全局并发；指定的所有卡都必须存在。默认最多四个进程，每卡最多 1 个 CV 进程或 2 个 NLP 进程（由 `cv_workers_per_gpu` / `nlp_workers_per_gpu` 控制），两类任务不混用同一张卡，CV 和 NLP 共享队列及 GPU 资源锁。卡空闲后自动补位，空闲显存不足就等待，不改变 batch size；`stop_on_error: true` 时失败会停止派发并通知其他 worker 在完整逻辑步保存检查点。
 
 每个 worker 设置 `CUDA_VISIBLE_DEVICES=<物理编号>` 和 `CUDA_DEVICE_ORDER=PCI_BUS_ID`，内部只使用 `cuda:0`，并核对 CUDA 实际 UUID。例如 `CUDA_VISIBLE_DEVICES=2` 时，`cuda:0` 必须对应物理 GPU 2。任务日志、`gpu_mapping.json`、状态和逐种子结果保留物理编号、UUID、型号、逻辑设备；GPU 遥测持续记录显存。
 

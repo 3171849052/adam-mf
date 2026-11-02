@@ -1,6 +1,6 @@
-"""Unified physical-GPU queue: one exclusive process per device."""
+"""Unified physical-GPU queue: configurable per-family capacity, exclusive ownership per run."""
 import os,signal,subprocess,sys,time
-from adam_mf.audit import atomic_json,read_json
+from adam_mf.audit import atomic_json,read_json,json_hash
 from adam_mf.paths import ROOT
 from adam_mf.runtime.state import process_token
 
@@ -29,8 +29,10 @@ def selected_gpus(runtime, inventory=None):
     return [by_id[i] for i in ids]
 
 
-def can_launch(task,gpu,active,runtime,usage):
-    if any(a['gpu']==gpu['id'] for a in active):return False
+def can_launch(task,gpu,active,runtime):
+    occupants=[a for a in active if a['gpu']==gpu['id']]
+    if any(a['task']!=task for a in occupants):return False
+    if len(occupants)>=runtime[task+'_workers_per_gpu']:return False
     return gpu['free_mb']>=runtime['min_free_memory_mb'][task]
 
 
@@ -43,11 +45,11 @@ def simulation(config,jobs):
             if a['until']<=tick:events.append(dict(tick=tick,event='finish',gpu=a['gpu'],job=a['job']));active.remove(a)
         for job in list(queue):
             if len(active)>=r['max_parallel_tasks']:break
-            gpu=next((g for g in gpus if can_launch(job.task,g,active,r,{})),None)
+            gpu=next((g for g in gpus if can_launch(job.task,g,active,r)),None)
             if gpu is None:continue
             active.append(dict(gpu=gpu['id'],task=job.task,job=job.id,until=tick+1+job.seed%3))
             events.append(dict(tick=tick,event='start',gpu=gpu['id'],job=job.id));queue.remove(job)
-        assert len(active)<=r['max_parallel_tasks'] and len({a['gpu'] for a in active})==len(active)
+        assert len(active)<=r['max_parallel_tasks']
         tick+=1
     return dict(simulated=True,training_started=False,planned=len(jobs),events=events)
 
@@ -78,7 +80,7 @@ def schedule(run,config,jobs,identity,lock_fd=None):
     for j in jobs:
         if verify_result(run,j,identity):state[j.id]['status']='completed'
         else:queue.append(j)
-    active={};stopping=[False];failed=False;last_wait=0
+    active={};gpu_locks={};stopping=[False];failed=False;last_wait=0
     def stop(signum,frame):stopping[0]=True
     signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
     def publish(status):
@@ -89,6 +91,7 @@ def schedule(run,config,jobs,identity,lock_fd=None):
                 ret=a['process'].poll()
                 if ret is None:continue
                 a['log'].close();del active[job_id]
+                if not any(other['gpu']==a['gpu'] for other in active.values()):os.close(gpu_locks.pop(a['gpu']))
                 row=state[job_id];row['exit_code']=ret
                 if ret==0 and verify_result(run,a['job'],identity):row['status']='completed'
                 elif ret==75:
@@ -113,14 +116,18 @@ def schedule(run,config,jobs,identity,lock_fd=None):
                     gpu=None;gpu_lock=None
                     occupied=[dict(gpu=a['gpu'],task=a['job'].task,pid=a['process'].pid) for a in active.values()]
                     for candidate in inventory:
-                        if (binding and candidate['uuid']!=binding) or candidate['id'] not in allowed or not can_launch(job.task,candidate,occupied,r,usage):continue
-                        gpu_lock=reserve_gpu(candidate,ROOT/'logs/gpu_locks')
-                        if gpu_lock is not None:gpu=candidate;break
+                        if (binding and candidate['uuid']!=binding) or candidate['id'] not in allowed or not can_launch(job.task,candidate,occupied,r):continue
+                        gpu_lock=gpu_locks.get(candidate['id'])
+                        if gpu_lock is None:gpu_lock=reserve_gpu(candidate,ROOT/'logs/gpu_locks')
+                        if gpu_lock is not None:
+                            gpu_locks[candidate['id']]=gpu_lock;gpu=candidate;break
                     if gpu is None:continue
                     logpath=run/'logs'/(job.id+'.log');log=logpath.open('a')
-                    env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(gpu['id']),CUDA_DEVICE_ORDER='PCI_BUS_ID',PYTHONUNBUFFERED='1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_DATASETS_OFFLINE='1')
+                    env=dict(os.environ,ADAM_MF_IDENTITY_HASH=json_hash(identity),CUDA_VISIBLE_DEVICES=str(gpu['id']),CUDA_DEVICE_ORDER='PCI_BUS_ID',PYTHONUNBUFFERED='1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_DATASETS_OFFLINE='1')
+                    proc=None
                     try:proc=subprocess.Popen([sys.executable,'-B','-m','adam_mf.runtime.worker','--run',str(run),'--job',job.id,'--gpu',str(gpu['id'])],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,pass_fds=(gpu_lock,)+( (lock_fd,) if lock_fd is not None else ()))
-                    finally:os.close(gpu_lock)
+                    finally:
+                        if proc is None:log.close()
                     active[job.id]=dict(process=proc,job=job,gpu=gpu['id'],log=log);queue.remove(job)
                     manifest_path=run/'run_manifest.json'
                     if manifest_path.exists():
@@ -141,6 +148,7 @@ def schedule(run,config,jobs,identity,lock_fd=None):
         for a in active.values():
             if a['process'].poll() is None:a['process'].send_signal(signal.SIGTERM)
         for a in active.values():a['process'].wait();a['log'].close()
+        for fd in gpu_locks.values():os.close(fd)
     complete=all(v['status']=='completed' for v in state.values())
     publish('trained' if complete else 'failed' if failed else 'paused')
     return complete

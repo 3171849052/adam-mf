@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 from adam_mf.paths import ROOT,local_path
 from adam_mf.config import load_config,plan
-from adam_mf.audit import atomic_json,atomic_text,read_json,code_hashes,verify_assets,json_hash
+from adam_mf.audit import atomic_json,atomic_text,read_json,code_hashes,json_hash,hash_session,file_hash
 from adam_mf.runtime.state import identity,check_identity,process_token,alive
 
 class PipelineStopped(Exception):pass
@@ -22,7 +22,6 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
             candidate=local_path(read_json(last)['run_dir'])
             status=read_json(candidate/'status.json')['status'] if (candidate/'status.json').exists() else 'created'
             if status!='completed':
-                if read_json(candidate/'run_manifest.json').get('identity'):check_identity(candidate,config)
                 if json_hash(load_config(candidate/'config_snapshot.yaml'))!=json_hash(config) or read_json(candidate/'run_manifest.json')['code_sha256']!=code_hashes():raise ValueError('Resume refused: configuration/code changed')
                 run=candidate
         if run is None:
@@ -30,10 +29,10 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
             run=local_path(config['paths']['outputs'])/run_id;run.mkdir(parents=True)
             for name in ('checkpoints','per_seed/cv','per_seed/nlp','figures','audit','logs'):(run/name).mkdir(parents=True,exist_ok=True)
             atomic_text(run/'config_snapshot.yaml',yaml.safe_dump(config,allow_unicode=True,sort_keys=False))
-            ident=None
-            atomic_json(run/'run_manifest.json',dict(run_id=run_id,dry_run=dry_run,identity=ident,code_sha256=code_hashes(),planned_tasks=[j.values() for j in plan(config)]))
+            ident=None;codes=code_hashes()
+            atomic_json(run/'run_manifest.json',dict(run_id=run_id,dry_run=dry_run,identity=ident,code_sha256=codes,planned_tasks=[j.values() for j in plan(config)]))
             atomic_json(run/'audit/config_hash.json',dict(sha256=json_hash(config)))
-            atomic_json(run/'audit/code_hash.json',code_hashes())
+            atomic_json(run/'audit/code_hash.json',codes)
             atomic_json(run/'status.json',dict(status='created',planned=len(plan(config)),completed=0))
         args=[sys.executable,'-B','-m','adam_mf.cli','pipeline','--run',str(run),'--lock-fd',str(lock)]
         if dry_run:args.append('--dry-run')
@@ -59,20 +58,22 @@ def preflight(run,config):
     manifest=read_json(run/'run_manifest.json')
     if manifest.get('identity'):
         # Never silently repair or replace inputs of an existing experiment.
-        check_identity(run,config)
+        ident=check_identity(run,config)
     else:
         if manifest['code_sha256']!=code_hashes():raise ValueError('Code changed since launch')
         print('Downloading/verifying pinned assets...',flush=True)
-        fetch_assets(config);prepare_data(config)
-        ident=identity(config);manifest['identity']=ident
+        fetch_assets(config);hashes=prepare_data(config)
+        ident=identity(config,hashes);manifest['identity']=ident
         atomic_json(run/'run_manifest.json',manifest)
-        atomic_json(run/'audit/asset_hashes.json',verify_assets(config))
+        atomic_json(run/'audit/asset_hashes.json',hashes)
+    atomic_json(run/'audit/test_hashes.json',{str(p.relative_to(ROOT)):file_hash(p) for p in sorted((ROOT/'tests').rglob('*.py'))})
     logpath=run/'logs/unit_tests.log'
     with logpath.open('w') as f:
         test=subprocess.run([sys.executable,'-B','-m','pytest',str(ROOT/'tests'),'-q'],cwd=ROOT,stdout=f,stderr=subprocess.STDOUT,env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(config['runtime']['gpu_ids'][0]),CUDA_DEVICE_ORDER='PCI_BUS_ID',ADAM_MF_TEST_CUDA='1',ADAM_MF_CONFIG=str(run/'config_snapshot.yaml'),HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_DATASETS_OFFLINE='1'))
     if test.returncode:raise RuntimeError(f'Unit tests failed: {logpath}')
     atomic_json(run/'audit/scheduler_dry_run.json',simulation(config,plan(config)))
     atomic_json(run/'audit/preflight.json',dict(status='passed',tests_exit_code=test.returncode,planned=len(plan(config)),dry_run_training_tasks=0))
+    return ident
 
 
 def pipeline(run,lock_fd,dry_run=False):
@@ -84,13 +85,12 @@ def pipeline(run,lock_fd,dry_run=False):
         fcntl.flock(lock_fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         previous=read_json(run/'status.json')
         atomic_json(run/'status.json',dict(previous,status='preflight'))
-        preflight(run,config);jobs=plan(config)
+        with hash_session():ident=preflight(run,config)
+        jobs=plan(config)
         atomic_json(run/'task_plan.json',[dict(id=j.id,**j.values(),**j.parameters,total_steps=j.total_steps,physical_batch_size=j.physical_batch) for j in jobs])
         if dry_run:
-            check_identity(run,config)
             atomic_json(run/'status.json',dict(status='dry_run_complete',planned=len(jobs),completed=0,training_started=False))
             print(f'Dry-run passed: {len(jobs)} formal jobs generated, zero training tasks started.',flush=True);return 0
-        ident=check_identity(run,config)
         from adam_mf.runtime.scheduler import schedule
         complete=schedule(run,config,jobs,ident,lock_fd)
         if complete:
@@ -110,7 +110,11 @@ def pipeline(run,lock_fd,dry_run=False):
         previous=read_json(run/'status.json')
         atomic_json(run/'status.json',dict(previous,status='paused',message=str(error)))
         print(str(error),flush=True);return 75
-    except BaseException as error:
+    except (KeyboardInterrupt,SystemExit) as error:
+        previous=read_json(run/'status.json')
+        atomic_json(run/'status.json',dict(previous,status='paused',message=type(error).__name__))
+        raise
+    except Exception as error:
         atomic_json(run/'audit/pipeline_error.json',dict(error=f'{type(error).__name__}: {error}',traceback=traceback.format_exc()))
         previous=read_json(run/'status.json') if (run/'status.json').exists() else {}
         atomic_json(run/'status.json',dict(previous,status='failed',error=str(error)))

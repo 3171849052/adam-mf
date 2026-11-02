@@ -16,8 +16,8 @@ def environment():
     names=('torch','torchvision','timm','transformers','opacus','numpy','scipy','scikit-learn','pandas','pyarrow','safetensors','PyYAML','matplotlib')
     return dict(python=platform.python_version(),packages={n:m.version(n) for n in names})
 
-def identity(config):
-    hashes=verify_assets(config)
+def identity(config,hashes=None):
+    if hashes is None:hashes=verify_assets(config)
     required=[];p=config['paths']
     required += [str(local_path(p['data'])/f'cifar100/cifar-100-python/{name}') for name in ('train','test','meta')]
     required += [str(local_path(p['data'])/f'sst2/{name}.parquet') for name in ('train','validation')]
@@ -37,3 +37,20 @@ def check_identity(run,config):
     manifest=read_json(run/'run_manifest.json');current=identity(config)
     if current!=manifest['identity']:raise ValueError('Resume refused: configuration, code, environment, model, asset hashes or GPU identities changed')
     return current
+
+
+def worker_identity(run,config,job,gpu_id,expected_hash):
+    """Consume the coordinator's verified identity without rereading asset bytes."""
+    manifest=read_json(run/'run_manifest.json');ident=manifest['identity']
+    if not ident or json_hash(ident)!=expected_hash:raise ValueError('Worker experiment identity mismatch')
+    if ident['config_hash']!=json_hash(config):raise ValueError('Worker configuration snapshot mismatch')
+    if job.values() not in manifest['planned_tasks']:raise ValueError('Worker task is outside this run')
+    from adam_mf.runtime.scheduler import selected_gpus
+    actual=next(g for g in selected_gpus(config['runtime']) if g['id']==gpu_id)
+    expected=next(g for g in ident['gpus'] if g['id']==gpu_id)
+    if actual['uuid']!=expected['uuid']:raise ValueError('Worker physical GPU UUID mismatch')
+    from adam_mf.assets import catalog,asset_path
+    for row in catalog()['files']:
+        path=asset_path(row,config)
+        if not path.is_file() or path.is_symlink():raise ValueError(f'Missing worker asset: {path}')
+    return ident

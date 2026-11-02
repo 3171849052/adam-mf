@@ -1,6 +1,7 @@
 """First moments always consume already noised gradients in the clipping space."""
 import math
 import torch
+from adam_mf.optimizers.finite import all_finite
 from adam_mf.registry import METHODS
 
 
@@ -33,7 +34,7 @@ class Optimizer(torch.optim.Optimizer):
     @torch.no_grad()
     def step(self, closure=None):
         if closure is not None: raise ValueError('Pass already noised gradients; closures are unsupported')
-        rows=[]; pending=[]
+        rows=[]; pending=[]; finite=[]
         # Validate every state/update before changing any parameter.
         for group in self.param_groups:
             method=group['method']; b1,b2=group['betas']
@@ -48,8 +49,7 @@ class Optimizer(torch.optim.Optimizer):
                     source=p._logical_denominator*q
                     v=b2*state['exp_avg_sq']+(1-b2)*source.square()
                 check=[q,u,update,p+update]+([v] if v is not None else [])
-                if not all(torch.isfinite(x).all().item() for x in check):
-                    raise FloatingPointError('Non-finite noised gradient, state, update or parameter')
+                finite.extend(torch.isfinite(x).all() for x in check)
                 d=p._logical_denominator
                 rows.append(torch.stack((q.double().square().sum(), update.double().square().sum(),
                     d.double().sum(),d.min().double(),d.max().double(),
@@ -57,6 +57,8 @@ class Optimizer(torch.optim.Optimizer):
                     torch.zeros((),device=p.device,dtype=torch.float64) if v is None else v.max().double(),
                     torch.tensor(p.numel(),device=p.device,dtype=torch.float64))))
                 pending.append((p,state,t,u,v,update))
+        if not torch.stack(finite).all().item():
+            raise FloatingPointError('Non-finite noised gradient, state, update or parameter')
         r=torch.stack(rows).cpu(); n=float(r[:,7].sum())
         self.last_diagnostics=dict(step=pending[0][2],noisy_gradient_norm=float(r[:,0].sum().sqrt()),
             update_norm=float(r[:,1].sum().sqrt()),denominator_mean=float(r[:,2].sum()/n),
@@ -91,9 +93,8 @@ class LogicalBatch:
             if z is not None:s.add_(z[i])
             p.grad=s/self.logical_size
         self.last_gradient_norm=float(torch.stack([p.grad.double().square().sum() for p in self.parameters]).sum().sqrt())
-        if not all(torch.isfinite(p.grad).all() for p in self.parameters):raise FloatingPointError('Nonfinite gradient')
         self.optimizer.step()
-        if not all(torch.isfinite(p).all() and torch.isfinite(self.optimizer.state[p]['exp_avg_sq']).all() for p in self.parameters):raise FloatingPointError('Nonfinite STP-EX state')
+        if not all_finite(t for p in self.parameters for t in (p,self.optimizer.state[p]['exp_avg'],self.optimizer.state[p]['exp_avg_sq'])):raise FloatingPointError('Nonfinite STP-EX state')
         self.micro_steps=0;self.optimizer_steps+=1
         return True
 def unclipped_microbatch(model,inputs,targets):

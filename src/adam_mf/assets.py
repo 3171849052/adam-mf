@@ -102,7 +102,7 @@ def manifests(config,prepared=False):
                 if not prepared:continue
                 if not path.is_file():raise FileNotFoundError(path)
             elif not matches(path,row):raise ValueError(f'Pinned asset mismatch: {path}')
-            rows.append(dict(path=str(path.relative_to(ROOT)),bytes=path.stat().st_size,sha256=file_hash(path)))
+            rows.append(dict(path=str(path.relative_to(ROOT)),bytes=path.stat().st_size,sha256=file_hash(path) if row['kind']=='prepared' else row['sha256']))
         folder=local_path(config['paths']['data'] if key=='data' else config['paths']['matrices'] if key=='matrices' else str(local_path(config['paths']['cv_model']).parent.relative_to(ROOT)))
         atomic_json(folder/'manifest.json',dict(catalog_sha256=file_hash(CATALOG),files=rows,total_bytes=sum(r['bytes'] for r in rows)))
 
@@ -137,12 +137,8 @@ def fetch_assets(config):
                     except RuntimeError:
                         if url==([a['url']]+a.get('mirrors',[]))[-1]:raise
                 extract_member(archive,row['member'],target,row)
-        from adam_mf.data.preprocessing import verify_prepared_content
-        try:
-            verify_prepared_content(config);prepared=True
-        except (OSError,ValueError,RuntimeError,EOFError):prepared=False
-        manifests(config,prepared=prepared)
-    verify_assets(config,include_prepared=prepared)
+        manifests(config,prepared=False)
+    return verify_assets(config,include_prepared=False)
 
 
 def verify_assets(config=None,include_prepared=True):
@@ -156,7 +152,7 @@ def verify_assets(config=None,include_prepared=True):
             if not include_prepared:continue
             if not path.is_file() or path.is_symlink():raise ValueError(f'Missing prepared asset: {path}')
         elif not matches(path,row):raise ValueError(f'Pinned asset hash/size mismatch: {path}')
-        hashes[str(path.relative_to(ROOT))]=file_hash(path)
+        hashes[str(path.relative_to(ROOT))]=file_hash(path) if row['kind']=='prepared' else row['sha256']
     if include_prepared:
         from adam_mf.data.preprocessing import verify_prepared_content
         verify_prepared_content(config)

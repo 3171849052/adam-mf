@@ -1,5 +1,6 @@
 """Exp15b's exact uncorrected Momentum update, plus ordinary PyTorch Adam."""
 import torch
+from adam_mf.optimizers.finite import all_finite
 
 
 class Momentum(torch.optim.Optimizer):
@@ -43,9 +44,9 @@ class LogicalBatch:
             for total,z in zip(self.sums,self.noise.next()): total.add_(z)
         for total,p in zip(self.sums,self.parameters): p.grad=total/self.logical_size
         self.last_gradient_norm=float(torch.stack([p.grad.double().square().sum() for p in self.parameters]).sum().sqrt())
-        if not all(torch.isfinite(p.grad).all() for p in self.parameters): raise FloatingPointError('Nonfinite gradient')
+        if not all_finite(p.grad for p in self.parameters): raise FloatingPointError('Nonfinite gradient')
         self.optimizer.step()
-        if not all(torch.isfinite(p).all() for p in self.parameters): raise FloatingPointError('Nonfinite parameter')
+        if not all_finite(t for p in self.parameters for t in (p,self.optimizer.state[p]['exp_avg'])): raise FloatingPointError('Nonfinite parameter')
         self.optimizer_steps+=1;self.micro_steps=0
         return True
 

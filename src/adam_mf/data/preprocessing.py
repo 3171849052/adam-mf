@@ -31,15 +31,26 @@ def verify_preprocessing(config):
 def verify_prepared_content(config):
     """Pin tensor values, dtypes and shapes independently of torch ZIP metadata."""
     from adam_mf.assets import catalog,asset_path
-    from adam_mf.audit import array_hash
+    from adam_mf.audit import array_hash,file_hash,json_hash,_validation_cache
+    cache=_validation_cache.get()
     for row in catalog()['files']:
         if row['kind']!='prepared':continue
         path=asset_path(row,config)
-        if path.suffix=='.pt':arrays={k:v.numpy() for k,v in torch.load(path,weights_only=True).items()}
+        key=('prepared-content',file_hash(path),json_hash(row['content'])) if cache is not None else None
+        if cache is not None and key in cache:continue
+        if path.suffix=='.pt':
+            try:loaded=torch.load(path,weights_only=True)
+            except RuntimeError as error:
+                # Only serialization damage is recoverable; OOM and logic errors propagate.
+                if str(error).startswith(('PytorchStreamReader failed reading zip archive:', 'unexpected EOF')):
+                    raise ValueError(f'Invalid prepared archive: {path}') from error
+                raise
+            arrays={k:v.numpy() for k,v in loaded.items()}
         else:
             with np.load(path) as f:arrays={k:f[k] for k in f.files}
         actual={k:dict(shape=list(a.shape),dtype=str(a.dtype),sha256=array_hash(a)) for k,a in arrays.items()}
         if actual!=row['content']:raise ValueError(f'Prepared tensor/split content mismatch: {path}')
+        if cache is not None:cache[key]=True
     return True
 
 
@@ -53,7 +64,7 @@ def prepare_data(config):
         verify_assets(config,include_prepared=False)
         try:
             verify_prepared_content(config)
-        except (OSError,ValueError,RuntimeError,EOFError):
+        except (OSError,ValueError,EOFError,pickle.UnpicklingError):
             p=config['paths'];root=local_path(p['data']);cache=local_path(p['preprocessed']);cache.mkdir(parents=True,exist_ok=True)
             seed=config['split_seed'];tokenizer=BertTokenizer.from_pretrained(str(local_path(p['nlp_model'])),local_files_only=True)
             generated={}
@@ -85,5 +96,6 @@ def prepare_data(config):
                     os.replace(tmp,cache/name)
                 finally:
                     if os.path.exists(tmp):os.unlink(tmp)
-        verify_prepared_content(config);manifests(config,prepared=True)
+            verify_prepared_content(config)
+        manifests(config,prepared=True)
     return verify_assets(config)

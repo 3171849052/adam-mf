@@ -1,5 +1,6 @@
 """Standard Adam and Exp9's frozen STP scaling, with optional clipping/noise."""
 import torch
+from adam_mf.optimizers.finite import all_finite
 from adam_mf.privacy.clipping import freeze_adam_scale
 
 def adam_optimizer(model,cfg):return torch.optim.Adam(model.parameters(),lr=cfg.lr,betas=cfg.betas,eps=cfg.adam_eps,weight_decay=cfg.weight_decay)
@@ -25,9 +26,9 @@ class AdamLogicalBatch:
             if self.scaled:s.div_(p._logical_scale)
             p.grad=s/self.logical_size
         self.last_gradient_norm=float(torch.stack([p.grad.double().square().sum() for p in self.parameters]).sum().sqrt())
-        if not all(torch.isfinite(p.grad).all() for p in self.parameters):raise FloatingPointError('Nonfinite gradient')
+        if not all_finite(p.grad for p in self.parameters):raise FloatingPointError('Nonfinite gradient')
         self.optimizer.step()
-        if not all(torch.isfinite(p).all() and torch.isfinite(self.optimizer.state[p]['exp_avg_sq']).all() for p in self.parameters):raise FloatingPointError('Nonfinite Adam state')
+        if not all_finite(t for p in self.parameters for t in (p,self.optimizer.state[p]['exp_avg'],self.optimizer.state[p]['exp_avg_sq'])):raise FloatingPointError('Nonfinite Adam state')
         self.micro_steps=0;self.optimizer_steps+=1
         return True
 def unclipped_microbatch(model,inputs,targets):
