@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "baseline_sha256": "d25df31beebcb022b7c74ae88c2e971dbacd828be6433abac7028a61c62dc9f1",
+  "current_sha256": "4de4623c6e7f6756a86f0e6c2ed6bc082c2577f3adf98a61ebfe7554e3d909bf",
+  "experiment_parameters_sha256": "1ed31e464c6cfbe1102489efcf684a407e710ed1063899bf24e2160f4ccbd564",
+  "all_original_experiment_parameters_unchanged": true,
+  "allowed_sections": [
+    "runtime",
+    "paths"
+  ]
+}

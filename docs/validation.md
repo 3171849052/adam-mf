@@ -1,3 +1,5 @@
+> 此文件记录上轮验收，含已失效的部署与 Git LFS 描述。当前工程验收以 [engineering_validation.md](engineering_validation.md) 为准；参数保全以 [config_preservation.json](config_preservation.json) 为准。
+
 # 交付验收记录
 
 2026-11-02（Asia/Shanghai），在本机现有 curve / Python 3.11.15、RTX 3080 Ti 环境执行。完整机器可读记录见 validation.json；参数核对见 parameter_audit.json；源文件哈希及迁移表见 source_audit.json / protocol_notes.md。

@@ -1,14 +1,15 @@
-"""Independent memory-aware GPU queue, one task family per GPU."""
+"""Unified physical-GPU queue: one exclusive process per device."""
 import os,signal,subprocess,sys,time
 from adam_mf.audit import atomic_json,read_json
 from adam_mf.paths import ROOT
+from adam_mf.runtime.state import process_token
 
 def gpu_inventory():
-    out=subprocess.check_output(['nvidia-smi','--query-gpu=index,name,memory.total,memory.free','--format=csv,noheader,nounits'],text=True)
+    out=subprocess.check_output(['nvidia-smi','--query-gpu=index,uuid,name,memory.total,memory.free,driver_version','--format=csv,noheader,nounits'],text=True)
     rows=[]
     for line in out.strip().splitlines():
-        i,name,total,free=[v.strip() for v in line.split(',')]
-        rows.append(dict(id=int(i),name=name,total_mb=int(total),free_mb=int(free)))
+        i,uuid,name,total,free,driver=[v.strip() for v in line.split(',')]
+        rows.append(dict(id=int(i),uuid=uuid,name=name,total_mb=int(total),free_mb=int(free),driver=driver))
     return rows
 
 def process_memory():
@@ -20,19 +21,57 @@ def process_memory():
         except ValueError:continue
     return rows
 
+def selected_gpus(runtime, inventory=None):
+    inventory=gpu_inventory() if inventory is None else inventory
+    ids=runtime['gpu_ids'];by_id={g['id']:g for g in inventory}
+    missing=set(ids)-set(by_id)
+    if missing:raise RuntimeError(f'Configured physical GPUs missing: {sorted(missing)}; detected {sorted(by_id)}. No automatic fallback.')
+    return [by_id[i] for i in ids]
+
+
 def can_launch(task,gpu,active,runtime,usage):
-    same=[a for a in active if a['gpu']==gpu['id']]
-    if same and any(a['task']!=task for a in same):return False
-    if len(same)>=runtime[task+'_workers_per_gpu']:return False
-    # Reserve startup memory not yet reflected in nvidia-smi; never shrink batches.
-    pending=sum(max(0,runtime['min_free_memory_mb'][a['task']]-usage.get(a['pid'],0)) for a in same)
-    return gpu['free_mb']-pending>=runtime['min_free_memory_mb'][task]
+    if any(a['gpu']==gpu['id'] for a in active):return False
+    return gpu['free_mb']>=runtime['min_free_memory_mb'][task]
+
+
+def simulation(config,jobs):
+    """Exercise the same resource predicate with mixed tasks, no CUDA or training."""
+    r=config['runtime'];gpus=[dict(id=i,free_mb=999999) for i in r['gpu_ids']]
+    queue=list(jobs);active=[];events=[];tick=0
+    while queue or active:
+        for a in list(active):
+            if a['until']<=tick:events.append(dict(tick=tick,event='finish',gpu=a['gpu'],job=a['job']));active.remove(a)
+        for job in list(queue):
+            if len(active)>=r['max_parallel_tasks']:break
+            gpu=next((g for g in gpus if can_launch(job.task,g,active,r,{})),None)
+            if gpu is None:continue
+            active.append(dict(gpu=gpu['id'],task=job.task,job=job.id,until=tick+1+job.seed%3))
+            events.append(dict(tick=tick,event='start',gpu=gpu['id'],job=job.id));queue.remove(job)
+        assert len(active)<=r['max_parallel_tasks'] and len({a['gpu'] for a in active})==len(active)
+        tick+=1
+    return dict(simulated=True,training_started=False,planned=len(jobs),events=events)
+
+
+def reserve_gpu(gpu,lock_dir):
+    import fcntl
+    lock_dir.mkdir(parents=True,exist_ok=True)
+    fd=os.open(lock_dir/(gpu['uuid']+'.lock'),os.O_CREAT|os.O_RDWR,0o600)
+    try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except BlockingIOError:os.close(fd);return None
+    return fd
+
+
+def resume_gpu(run,job,inventory):
+    folder=run/'checkpoints'/job.id
+    if not (folder/'latest.pt').exists():return None
+    mapping=read_json(folder/'gpu_mapping.json');uuid=mapping['gpu_uuid']
+    if uuid not in {g['uuid'] for g in inventory}:raise ValueError(f'Checkpoint physical GPU UUID unavailable: {uuid}')
+    return uuid
+
 
 def schedule(run,config,jobs,identity,lock_fd=None):
     from adam_mf.training.engine import verify_result,result_path
-    r=config['runtime'];inventory=gpu_inventory();ids=r['gpu_ids']
-    allowed=[g['id'] for g in inventory] if ids=='auto' else ids
-    if not allowed or not set(allowed)<=set(g['id'] for g in inventory):raise ValueError('Configured GPU does not exist')
+    r=config['runtime'];inventory=selected_gpus(r);allowed=r['gpu_ids']
     for task in {j.task for j in jobs}:
         if not any(g['id'] in allowed and g['total_mb']>=r['min_free_memory_mb'][task] for g in inventory):raise RuntimeError(f'No GPU has configured memory for {task}')
     state={j.id:dict(**j.values(),status='pending') for j in jobs};queue=[]
@@ -64,19 +103,31 @@ def schedule(run,config,jobs,identity,lock_fd=None):
                 publish('stopping' if active else 'failed' if failed else 'paused')
                 if not active:break
             else:
-                inventory=gpu_inventory();usage=process_memory()
+                inventory=selected_gpus(r);usage=process_memory()
                 with (run/'logs/gpu_telemetry.jsonl').open('a') as f:
                     import json
                     f.write(json.dumps(dict(time=time.time(),gpus=inventory,worker_memory_mb=usage))+'\n')
                 for job in list(queue):
                     if len(active)>=r['max_parallel_tasks']:break
-                    gpu=next((g for g in inventory if g['id'] in allowed and can_launch(job.task,g,[dict(gpu=a['gpu'],task=a['job'].task,pid=a['process'].pid) for a in active.values()],r,usage)),None)
+                    binding=resume_gpu(run,job,inventory)
+                    gpu=None;gpu_lock=None
+                    occupied=[dict(gpu=a['gpu'],task=a['job'].task,pid=a['process'].pid) for a in active.values()]
+                    for candidate in inventory:
+                        if (binding and candidate['uuid']!=binding) or candidate['id'] not in allowed or not can_launch(job.task,candidate,occupied,r,usage):continue
+                        gpu_lock=reserve_gpu(candidate,ROOT/'logs/gpu_locks')
+                        if gpu_lock is not None:gpu=candidate;break
                     if gpu is None:continue
                     logpath=run/'logs'/(job.id+'.log');log=logpath.open('a')
-                    env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(gpu['id']),PYTHONUNBUFFERED='1')
-                    proc=subprocess.Popen([sys.executable,'-B','-m','adam_mf.runtime.worker','--run',str(run),'--job',job.id,'--gpu',str(gpu['id'])],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,pass_fds=(lock_fd,) if lock_fd is not None else ())
+                    env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(gpu['id']),CUDA_DEVICE_ORDER='PCI_BUS_ID',PYTHONUNBUFFERED='1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_DATASETS_OFFLINE='1')
+                    try:proc=subprocess.Popen([sys.executable,'-B','-m','adam_mf.runtime.worker','--run',str(run),'--job',job.id,'--gpu',str(gpu['id'])],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,pass_fds=(gpu_lock,)+( (lock_fd,) if lock_fd is not None else ()))
+                    finally:os.close(gpu_lock)
                     active[job.id]=dict(process=proc,job=job,gpu=gpu['id'],log=log);queue.remove(job)
-                    state[job.id].update(status='running',pid=proc.pid,gpu_id=gpu['id'],log=str(logpath.relative_to(run)))
+                    manifest_path=run/'run_manifest.json'
+                    if manifest_path.exists():
+                        manifest=read_json(manifest_path)
+                        manifest.setdefault('gpu_assignments',[]).append(dict(job=job.id,pid=proc.pid,physical_gpu_id=gpu['id'],gpu_uuid=gpu['uuid'],gpu_name=gpu['name'],cuda_visible_devices=str(gpu['id']),logical_cuda_device='cuda:0',free_memory_mb=gpu['free_mb'],started=time.time()))
+                        atomic_json(manifest_path,manifest)
+                    state[job.id].update(status='running',pid=proc.pid,process_token=process_token(proc.pid),gpu_id=gpu['id'],gpu_uuid=gpu['uuid'],gpu_name=gpu['name'],cuda_visible_devices=str(gpu['id']),logical_device='cuda:0',log=str(logpath.relative_to(run)))
                     print(f'Start {job.id} GPU {gpu["id"]} PID {proc.pid}',flush=True)
                 for a in active.values():
                     path=run/'checkpoints'/a['job'].id/'progress.json'

@@ -11,11 +11,11 @@ def test_exact_formal_plan_and_frozen_values():
     expected={
       'adam-no-noise':[(.0003,None,None),(.001,None,None)],
       'momentum-no-noise':[(.05,None,None),(.1,None,None)],
-      'adam-iid':[(.000707106781187,30,None),(.002,.3,None)],
+      'adam-iid':[(.0007,30,None),(.002,.3,None)],
       'momentum-iid':[(2,.3,None),(2,.3,None)],
-      'adam-mf-sgd-b2lt':[(.003,24,None),(.0106926766216,40,None)],
-      'adam-mf-sgd-stp-b2lt':[(.003,200,.05),(.0106926766216,500,.00164316767252)],
-      'stpex-mf-momentum-bias-b2lt':[(.15,10,3),(.15,20,.001)],
+      'adam-mf-sgd-b2lt':[(.003,30,None),(.01,40,None)],
+      'adam-mf-sgd-stp-b2lt':[(.003,200,.05),(.01,500,.001)],
+      'stpex-mf-momentum-bias-b2lt':[(.1,10,3),(.1,20,.001)],
       'momentum-mf-momentum-b2lt':[(2,1,None),(.3,20,None)]}
     for method,params in expected.items():
         for task,values in zip(('cv','nlp'),params):

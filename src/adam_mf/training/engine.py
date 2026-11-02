@@ -27,6 +27,9 @@ def verify_result(run,cfg,identity):
     if result['identity']!=identity or result['optimizer_steps']!=cfg.total_steps or any(result[k]!=v for k,v in cfg.values().items()):raise ValueError(f'Completed result identity mismatch: {cfg.id}')
     if (result['learning_rate'],result['clip'],result['eps_scale'])!=(cfg.lr,cfg.clip,cfg.eps_scale):raise ValueError('Completed frozen parameters mismatch')
     if not np.isfinite([result['accuracy'],result['loss']]).all() or not 0<=result['accuracy']<=1 or len(result['epochs'])!=cfg.task_config['epochs']:raise ValueError('Invalid completed metrics')
+    if identity.get('gpus'):
+        physical=next((g for g in identity['gpus'] if g['id']==result['gpu_id']),None)
+        if physical is None or result.get('gpu_uuid')!=physical['uuid'] or result.get('cuda_visible_devices')!=str(physical['id']) or result.get('logical_cuda_device')!='cuda:0':raise ValueError('Completed physical GPU mapping mismatch')
     if result['noise_draws']!=(cfg.total_steps if cfg.private else 0):raise ValueError('Completed noise count mismatch')
     if cfg.private:
         if abs(result['epsilon']-cfg.config['privacy']['epsilon'])>1e-7 or result['delta']!=cfg.config['privacy']['delta']:raise ValueError('Completed privacy mismatch')
@@ -45,6 +48,15 @@ def run_training(cfg,run,identity,gpu_id):
     latest=output/'latest.pt';started=time.monotonic();model=None
     seed_all(cfg.seed);device=torch.device('cuda:0');torch.cuda.set_device(device)
     try:
+        gpu_record=next((g for g in identity.get('gpus',[]) if g['id']==gpu_id),{})
+        gpu_mapping=dict(physical_gpu_id=gpu_id,gpu_uuid=gpu_record.get('uuid'),gpu_name=gpu_record.get('name'),cuda_visible_devices=__import__('os').environ.get('CUDA_VISIBLE_DEVICES'),logical_cuda_device='cuda:0',memory_total_mb=gpu_record.get('total_mb'))
+        if gpu_record:
+            # Check CUDA's actual UUID, not just a possibly reordered numeric index.
+            actual_uuid=str(torch.cuda.get_device_properties(device).uuid)
+            if actual_uuid.removeprefix('GPU-')!=gpu_record['uuid'].removeprefix('GPU-'):raise RuntimeError(f'CUDA physical mapping mismatch: {actual_uuid} != {gpu_record["uuid"]}')
+        if gpu_record:
+            free,total=torch.cuda.mem_get_info(device);gpu_mapping.update(memory_free_mb=free//1048576,memory_used_mb=(total-free)//1048576)
+        print(gpu_mapping,flush=True)
         if cfg.task=='cv':
             base,metadata=pretrained_vit(local_path(cfg.config['paths']['cv_model']))
             init_hash,head_hash=initialization_digest(base),initialization_digest(base.head)
@@ -69,13 +81,15 @@ def run_training(cfg,run,identity,gpu_id):
         np.save(output/'train_order.npy',order)
         progress=dict(epoch=0,next_microbatch=0,loss_sum=0.,count=0,clip_count=0,rows=[],epochs=[],
                       augmentation_hashes=[],order_hash=array_hash(order),training_time=0.,wall_time=0.,peak_memory=0,
-                      initialization_hash=init_hash,head_hash=head_hash)
+                      initialization_hash=init_hash,head_hash=head_hash,gpu_mapping=gpu_mapping)
         resume_state=None;epoch_start=None
         if latest.exists():
             resume_state=load_checkpoint(latest,model,optimizer,logical,identity);progress=resume_state['progress']
             if progress['order_hash']!=array_hash(order) or progress['initialization_hash']!=init_hash or progress['head_hash']!=head_hash:raise ValueError('Initialization/order changed')
+            if gpu_record and progress.get('gpu_mapping',{}).get('gpu_uuid')!=gpu_record['uuid']:raise ValueError('Checkpoint physical GPU UUID changed')
             loader.generator.set_state(resume_state['sampler']['loader_generator'].cpu())
             restore_rng(resume_state['rng'])
+        atomic_json(output/'gpu_mapping.json',gpu_mapping)
         torch.cuda.reset_peak_memory_stats(device)
         def checkpoint():
             progress['wall_time']=wall_before+time.monotonic()-started
@@ -147,7 +161,7 @@ def run_training(cfg,run,identity,gpu_id):
         result=dict(**cfg.values(),status='completed',learning_rate=cfg.lr,clip=cfg.clip,eps_scale=cfg.eps_scale,
                     accuracy=final['accuracy'],loss=final['loss'],epsilon=final['epsilon'],delta=privacy.get('delta'),
                     clip_fraction=final['clip_fraction'],training_time=progress['training_time'],wall_time=progress['wall_time'],
-                    peak_memory=progress['peak_memory'],gpu_id=gpu_id,gpu_name=torch.cuda.get_device_name(device),
+                    peak_memory=progress['peak_memory'],gpu_mapping=gpu_mapping,gpu_uuid=gpu_record.get('uuid'),cuda_visible_devices=gpu_mapping['cuda_visible_devices'],logical_cuda_device='cuda:0',gpu_id=gpu_id,gpu_name=torch.cuda.get_device_name(device),
                     optimizer_steps=logical.optimizer_steps,noise_draws=noise.step_count if noise else 0,epochs=progress['epochs'],
                     initialization_hash=init_hash,head_hash=head_hash,train_order_hash=array_hash(order),
                     augmentation_hashes=progress['augmentation_hashes'],privacy=privacy,identity=identity,

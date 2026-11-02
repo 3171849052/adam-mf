@@ -2,7 +2,7 @@ from config_helpers import load_config
 import numpy as np
 import pytest
 from adam_mf.config import plan
-from adam_mf.paths import ROOT
+from adam_mf.paths import ROOT,local_path
 from adam_mf.privacy.calibration import load_matrix
 from adam_mf.privacy.accountant import calibrate,epsilon_from_mu,fixed_epoch_sensitivity,target_mu,gdp_delta
 
@@ -10,7 +10,7 @@ from adam_mf.privacy.accountant import calibrate,epsilon_from_mu,fixed_epoch_sen
 @pytest.mark.parametrize('method',['adam-iid','momentum-iid','adam-mf-sgd-b2lt','adam-mf-sgd-stp-b2lt','stpex-mf-momentum-bias-b2lt','momentum-mf-momentum-b2lt'])
 def test_whole_training_calibration_and_prefixes(task,method):
     cfg=next(c for c in plan(load_config()) if c.task==task and c.method==method)
-    a=load_matrix(ROOT/'assets/matrices',cfg.workload,cfg.mechanism,cfg.total_steps,cfg.betas[0])
+    a=load_matrix(local_path(load_config()['paths']['matrices']),cfg.workload,cfg.mechanism,cfg.total_steps,cfg.betas[0])
     cal=calibrate(a['C'],cfg.protocol());p=cfg.config['privacy'];eps=[]
     for step in (1,cfg.spacing,cfg.spacing+1,cfg.total_steps):
         sens=fixed_epoch_sensitivity(a['C'],5,cfg.spacing,steps=step)

@@ -29,17 +29,9 @@ def write_csv(p,rows,fields=None):
 def code_hashes():
     paths=list((ROOT/'src').rglob('*.py'))+list((ROOT/'tests').rglob('*.py'))+list((ROOT/'scripts').glob('*.py'))
     paths += list((ROOT/'scripts').glob('*.sh'))
-    paths += [ROOT/p for p in ('start.sh','status.sh','stop.sh','pyproject.toml','environment.yml')]
+    paths += list(ROOT.glob('*.sh')) + [ROOT/p for p in ('pyproject.toml','environment.yml','requirements.lock','config/assets.lock.json','resources/matrices-v1.tar.gz')]
+    paths += list((ROOT/'config/tokenizer').glob('*.json'))
     return {str(p.relative_to(ROOT)):file_hash(p) for p in sorted(paths)}
-def verify_assets():
-    hashes={}
-    for folder in ('data','model','assets/matrices'):
-        manifest=ROOT/folder/'manifest.json'
-        data=read_json(manifest)
-        hashes[str(manifest.relative_to(ROOT))]=file_hash(manifest)
-        for item in data['files']:
-            p=ROOT/item['path']
-            if p.is_symlink() or not p.is_file() or p.stat().st_size!=item['bytes'] or file_hash(p)!=item['sha256']:
-                raise ValueError(f'Asset hash mismatch: {p}')
-            hashes[item['path']]=item['sha256']
-    return hashes
+def verify_assets(config=None):
+    from adam_mf.assets import verify_assets as verify
+    return verify(config)

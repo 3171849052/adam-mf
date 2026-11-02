@@ -4,7 +4,7 @@ from adam_mf.audit import read_json,write_csv,atomic_json,atomic_text,json_hash
 from adam_mf.registry import METHODS
 from adam_mf.reporting.statistics import statistics
 from adam_mf.training.engine import verify_result,result_path
-FIELDS=('task','method','seed','learning_rate','clip','eps_scale','accuracy','loss','epsilon','delta','clip_fraction','training_time','peak_memory','status','config_hash','model_hash','gpu_id','gpu_name')
+FIELDS=('task','method','seed','learning_rate','clip','eps_scale','accuracy','loss','epsilon','delta','clip_fraction','training_time','peak_memory','status','config_hash','model_hash','gpu_id','gpu_name','gpu_uuid','cuda_visible_devices','logical_cuda_device')
 
 def report(run,config,jobs,identity):
     results=[];failures=[]
@@ -31,7 +31,7 @@ def report(run,config,jobs,identity):
     write_csv(run/'summary.csv',summaries,summary_fields)
     write_csv(run/'paired_differences.csv',pairs,('task','left','right','direction','n','mean','sd','ci95_low','ci95_high'))
     full_plan=len(jobs)==160 and len({(j.task,j.method) for j in jobs})==16
-    complete=len(results)==len(jobs) and not failures
+    complete=len(results)==len(jobs) and not failures and all({r['seed'] for r in results if r['task']==t and r['method']==m}==set(config['seeds']) for t in ('cv','nlp') for m in METHODS)
     audit=dict(status='passed' if complete and full_plan and all(x['matched'] for x in pair_audit) else 'incomplete',planned=len(jobs),completed=len(results),failed=len(failures),full_160_plan=full_plan,
                independent_new_training=True,all_artifact_hashes_verified=True,identity=identity,paired_rng_checks=pair_audit,
                seeds_per_group={f'{t}/{m}':sum(r['task']==t and r['method']==m for r in results) for t in ('cv','nlp') for m in METHODS})

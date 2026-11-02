@@ -21,15 +21,19 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
         if not dry_run and not new_run and config['runtime']['resume'] and last.exists():
             candidate=local_path(read_json(last)['run_dir'])
             status=read_json(candidate/'status.json')['status'] if (candidate/'status.json').exists() else 'created'
-            if status!='completed':check_identity(candidate,config);run=candidate
+            if status!='completed':
+                if read_json(candidate/'run_manifest.json').get('identity'):check_identity(candidate,config)
+                if json_hash(load_config(candidate/'config_snapshot.yaml'))!=json_hash(config) or read_json(candidate/'run_manifest.json')['code_sha256']!=code_hashes():raise ValueError('Resume refused: configuration/code changed')
+                run=candidate
         if run is None:
             run_id=('dry-' if dry_run else '')+datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S-%f')+f'-{os.getpid()}'
             run=local_path(config['paths']['outputs'])/run_id;run.mkdir(parents=True)
             for name in ('checkpoints','per_seed/cv','per_seed/nlp','figures','audit','logs'):(run/name).mkdir(parents=True,exist_ok=True)
             atomic_text(run/'config_snapshot.yaml',yaml.safe_dump(config,allow_unicode=True,sort_keys=False))
-            ident=identity(config)
+            ident=None
             atomic_json(run/'run_manifest.json',dict(run_id=run_id,dry_run=dry_run,identity=ident,code_sha256=code_hashes(),planned_tasks=[j.values() for j in plan(config)]))
-            atomic_json(run/'audit/asset_hashes.json',verify_assets());atomic_json(run/'audit/config_hash.json',dict(sha256=ident['config_hash']))
+            atomic_json(run/'audit/config_hash.json',dict(sha256=json_hash(config)))
+            atomic_json(run/'audit/code_hash.json',code_hashes())
             atomic_json(run/'status.json',dict(status='created',planned=len(plan(config)),completed=0))
         args=[sys.executable,'-B','-m','adam_mf.cli','pipeline','--run',str(run),'--lock-fd',str(lock)]
         if dry_run:args.append('--dry-run')
@@ -44,18 +48,32 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
     return 0
 
 def preflight(run,config):
-    import torch
-    from adam_mf.runtime.scheduler import gpu_inventory
-    ident=check_identity(run,config);gpus=gpu_inventory()
-    if not torch.cuda.is_available() or not gpus:raise RuntimeError('CUDA and at least one GPU are required')
-    ids=config['runtime']['gpu_ids']
-    if ids!='auto' and not set(ids)<=set(g['id'] for g in gpus):raise ValueError('Invalid GPU selection')
-    atomic_json(run/'audit/environment.json',dict(environment=ident['environment'],gpus=gpus))
+    from adam_mf.runtime.environment import environment_report
+    from adam_mf.runtime.scheduler import simulation
+    from adam_mf.assets import fetch_assets
+    from adam_mf.data.preprocessing import prepare_data
+    print('Environment and four-GPU CUDA checks...',flush=True)
+    env=environment_report(config)
+    atomic_json(run/'audit/environment_report.json',env)
+    atomic_json(run/'audit/gpu_report.json',env['gpus'])
+    manifest=read_json(run/'run_manifest.json')
+    if manifest.get('identity'):
+        # Never silently repair or replace inputs of an existing experiment.
+        check_identity(run,config)
+    else:
+        if manifest['code_sha256']!=code_hashes():raise ValueError('Code changed since launch')
+        print('Downloading/verifying pinned assets...',flush=True)
+        fetch_assets(config);prepare_data(config)
+        ident=identity(config);manifest['identity']=ident
+        atomic_json(run/'run_manifest.json',manifest)
+        atomic_json(run/'audit/asset_hashes.json',verify_assets(config))
     logpath=run/'logs/unit_tests.log'
     with logpath.open('w') as f:
-        test=subprocess.run([sys.executable,'-B','-m','pytest',str(ROOT/'tests'),'-q'],cwd=ROOT,stdout=f,stderr=subprocess.STDOUT)
+        test=subprocess.run([sys.executable,'-B','-m','pytest',str(ROOT/'tests'),'-q'],cwd=ROOT,stdout=f,stderr=subprocess.STDOUT,env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(config['runtime']['gpu_ids'][0]),CUDA_DEVICE_ORDER='PCI_BUS_ID',ADAM_MF_TEST_CUDA='1',ADAM_MF_CONFIG=str(run/'config_snapshot.yaml'),HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_DATASETS_OFFLINE='1'))
     if test.returncode:raise RuntimeError(f'Unit tests failed: {logpath}')
+    atomic_json(run/'audit/scheduler_dry_run.json',simulation(config,plan(config)))
     atomic_json(run/'audit/preflight.json',dict(status='passed',tests_exit_code=test.returncode,planned=len(plan(config)),dry_run_training_tasks=0))
+
 
 def pipeline(run,lock_fd,dry_run=False):
     config=load_config(run/'config_snapshot.yaml')
@@ -83,9 +101,10 @@ def pipeline(run,lock_fd,dry_run=False):
         if complete and len(jobs)==160 and audit['status']!='passed':
             atomic_json(run/'status.json',dict(status='audit_failed',completed=audit['completed'],planned=len(jobs)))
             raise RuntimeError('Training completed but final integrity audit did not pass')
-        if complete:
+        if complete and audit['status']=='passed':
             previous=read_json(run/'status.json')
             atomic_json(run/'status.json',dict(previous,status='completed'))
+        elif complete:raise RuntimeError('Partial plan cannot be marked completed')
         return 0 if complete else 2
     except PipelineStopped as error:
         previous=read_json(run/'status.json')
@@ -111,5 +130,11 @@ def stop(config_path=None):
     c=load_config(config_path);p=local_path(c['paths']['logs'])/'current.json'
     if not p.exists():print('No pipeline to stop.');return
     rec=read_json(p)
-    if not alive(rec):print('Pipeline already exited. Checkpoints are preserved.');return
+    if not alive(rec):
+        run=local_path(rec['run_dir']);state=read_json(run/'status.json');sent=0
+        for task in state.get('tasks',{}).values():
+            if task.get('status')=='running' and alive(task):
+                os.kill(task['pid'],signal.SIGTERM);sent+=1
+        print(f'Coordinator exited; graceful stop sent to {sent} surviving workers. Checkpoints are preserved.')
+        return
     os.kill(rec['pid'],signal.SIGTERM);print('Graceful stop requested; workers checkpoint at the next logical step. Use ./status.sh to check exit.')

@@ -44,9 +44,10 @@ def validate(c):
             elif v['clip'] is not None:raise ValueError('No-noise methods cannot clip')
             if METHODS[name].scaled:positive(v['eps_scale'],'eps_scale')
             elif v['eps_scale'] is not None:raise ValueError('Scale only for STP methods')
-    r=c['runtime'];exact(r,('gpu_ids','cv_workers_per_gpu','nlp_workers_per_gpu','max_parallel_tasks','min_free_memory_mb','poll_seconds','resume','stop_on_error','checkpoint_every_steps'),'runtime')
-    if r['gpu_ids']!='auto' and (not isinstance(r['gpu_ids'],list) or not r['gpu_ids'] or len(set(r['gpu_ids']))!=len(r['gpu_ids']) or any(type(i) is not int or i<0 for i in r['gpu_ids'])):raise ValueError('Invalid GPU IDs')
-    for key in ('cv_workers_per_gpu','nlp_workers_per_gpu','max_parallel_tasks','checkpoint_every_steps'):positive(r[key],key,True)
+    r=c['runtime'];exact(r,('gpu_ids','cv_workers_per_gpu','nlp_workers_per_gpu','max_parallel_tasks','max_tasks_per_gpu','min_free_memory_mb','poll_seconds','resume','stop_on_error','checkpoint_every_steps'),'runtime')
+    if (not isinstance(r['gpu_ids'],list) or not r['gpu_ids'] or len(set(r['gpu_ids']))!=len(r['gpu_ids']) or any(type(i) is not int or i<0 for i in r['gpu_ids'])):raise ValueError('Invalid GPU IDs')
+    if any(r[k]!=1 for k in ('cv_workers_per_gpu','nlp_workers_per_gpu','max_tasks_per_gpu')) or r['max_parallel_tasks']>len(r['gpu_ids']):raise ValueError('One task per physical GPU; global limit must fit selected GPUs')
+    for key in ('cv_workers_per_gpu','nlp_workers_per_gpu','max_parallel_tasks','max_tasks_per_gpu','checkpoint_every_steps'):positive(r[key],key,True)
     positive(r['poll_seconds'],'poll_seconds');boolean(r['resume'],'resume');boolean(r['stop_on_error'],'stop_on_error')
     exact(r['min_free_memory_mb'],('cv','nlp'),'memory')
     for v in r['min_free_memory_mb'].values():positive(v,'memory',True)
@@ -54,6 +55,7 @@ def validate(c):
     for v in c['paths'].values():
         if not isinstance(v,str) or not v:raise ValueError('Invalid path')
         local_path(v)
+    if local_path(c['paths']['cv_model']).parent!=local_path(c['paths']['nlp_model']).parent:raise ValueError('Model folders must share a manifest parent')
     if not any(t['enabled'] for t in c['tasks'].values()) or not any(m['enabled'] for m in c['methods'].values()):raise ValueError('Empty experiment')
     return c
 

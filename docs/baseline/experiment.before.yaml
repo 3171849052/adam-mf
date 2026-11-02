@@ -1,0 +1,88 @@
+# 唯一正式实验配置；仅固定参数正式训练，无搜索或自动调整。
+schema_version: 1
+split_seed: 20261008
+seeds: [20261111, 20261112, 20261113, 20261114, 20261115, 20261116, 20261117, 20261118, 20261119, 20261120]
+training:
+  beta1: 0.9
+  beta2: 0.999
+  adam_eps: 1.0e-8
+  weight_decay: 0.0
+privacy:
+  epsilon: 8.0
+  delta: 1.0e-5
+  adjacency: add_remove_zero_out
+  sampling_amplification: false
+tasks:
+  cv:
+    enabled: true
+    dataset: cifar100
+    model: vit_tiny
+    physical_batch_size: 250
+    logical_batch_size: 1000
+    epochs: 5
+    total_steps: 250
+    precision: fp32
+    full_finetuning: true
+    loader_workers: 2
+  nlp:
+    enabled: true
+    dataset: sst2
+    model: bert_tiny
+    physical_batch_size: 1000
+    logical_batch_size: 1000
+    epochs: 5
+    total_steps: 310
+    precision: fp32
+    full_finetuning: true
+    loader_workers: 0
+methods:
+  adam-no-noise:
+    enabled: true
+    cv: {learning_rate: 0.0003, clip: null, eps_scale: null}
+    nlp: {learning_rate: 0.001, clip: null, eps_scale: null}
+  momentum-no-noise:
+    enabled: true
+    cv: {learning_rate: 0.05, clip: null, eps_scale: null}
+    nlp: {learning_rate: 0.1, clip: null, eps_scale: null}
+  adam-iid:
+    enabled: true
+    cv: {learning_rate: 0.0007, clip: 30.0, eps_scale: null}
+    nlp: {learning_rate: 0.002, clip: 0.3, eps_scale: null}
+  momentum-iid:
+    enabled: true
+    cv: {learning_rate: 2.0, clip: 0.3, eps_scale: null}
+    nlp: {learning_rate: 2, clip: 0.3, eps_scale: null}
+  adam-mf-sgd-b2lt:
+    enabled: true
+    cv: {learning_rate: 0.003, clip: 30.0, eps_scale: null}
+    nlp: {learning_rate: 0.01, clip: 40.0, eps_scale: null}
+  adam-mf-sgd-stp-b2lt:
+    enabled: true
+    cv: {learning_rate: 0.003, clip: 200.0, eps_scale: 0.05}
+    nlp: {learning_rate: 0.01, clip: 500.0, eps_scale: 0.001}
+  stpex-mf-momentum-bias-b2lt:
+    enabled: true
+    cv: {learning_rate: 0.1, clip: 10.0, eps_scale: 3.0}
+    nlp: {learning_rate: 0.1, clip: 20.0, eps_scale: 0.001}
+  momentum-mf-momentum-b2lt:
+    enabled: true
+    cv: {learning_rate: 2.0, clip: 1.0, eps_scale: null}
+    nlp: {learning_rate: 0.3, clip: 20, eps_scale: null}
+runtime:
+  gpu_ids: auto
+  cv_workers_per_gpu: 1
+  nlp_workers_per_gpu: 2
+  max_parallel_tasks: 8
+  min_free_memory_mb: {cv: 10000, nlp: 5000}
+  poll_seconds: 3
+  resume: true
+  stop_on_error: true
+  checkpoint_every_steps: 1
+paths:
+  data: data
+  preprocessed: data/preprocessed
+  cv_model: model/vit-tiny
+  nlp_model: model/bert-tiny
+  matrices: assets/matrices
+  outputs: outputs/runs
+  logs: logs

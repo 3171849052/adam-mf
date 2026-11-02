@@ -1,5 +1,6 @@
+from config_helpers import load_config
 import os
-from adam_mf.paths import ROOT
+from adam_mf.paths import ROOT,local_path
 import copy
 import pytest
 import torch
@@ -30,9 +31,9 @@ def test_cv_exact_clipping(scaled,device):
 def test_pretrained_vit_matches_timm_logits():
     import timm
     from safetensors.torch import load_file
-    seed_all(45);model,_=pretrained_vit(ROOT/'model/vit-tiny');model.eval()
+    seed_all(45);model,_=pretrained_vit(local_path(load_config()['paths']['cv_model']));model.eval()
     reference=timm.create_model('vit_tiny_patch16_224',pretrained=False,num_classes=100).eval()
-    weights=load_file(str(checkpoint_path(ROOT/'model/vit-tiny')))
+    weights=load_file(str(checkpoint_path(local_path(load_config()['paths']['cv_model']))))
     weights={k:v for k,v in weights.items() if not k.startswith('head.')}
     weights.update({'head.weight':model.head.weight,'head.bias':model.head.bias})
     reference.load_state_dict(weights,strict=True)

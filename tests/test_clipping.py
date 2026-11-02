@@ -1,5 +1,6 @@
+from config_helpers import load_config
 import os
-from adam_mf.paths import ROOT
+from adam_mf.paths import ROOT,local_path
 """Explicit per-example autograd is the independent clipping reference."""
 import copy
 from dataclasses import replace
@@ -45,7 +46,7 @@ def test_embedding_explicit_repeated_tokens(scaled,padding_idx,device):
 @pytest.mark.parametrize('device',(['cpu','cuda:0'] if os.environ.get('ADAM_MF_TEST_CUDA')=='1' and torch.cuda.is_available() else ['cpu']))
 def test_bert_norm_coefficient_and_accumulation(geometry,device,architecture):
     seed_all(43)
-    base = (tiny() if architecture=='small' else make_model(ROOT/'model/bert-tiny',dropout=0.)).to(device)
+    base = (tiny() if architecture=='small' else make_model(local_path(load_config()['paths']['nlp_model']),dropout=0.)).to(device)
     C=1.3
     wrapper = ScaledGhostModule if geometry=='scale' else StandardGhostModule
     model = wrapper(copy.deepcopy(base),C)

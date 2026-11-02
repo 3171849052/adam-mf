@@ -1,15 +1,17 @@
 from config_helpers import load_config
 import numpy as np
 import torch
-from adam_mf.paths import ROOT
+from adam_mf.paths import ROOT,local_path
 from adam_mf.audit import verify_assets,read_json
 from adam_mf.config import plan
 from adam_mf.data.loaders import cv_datasets,nlp_datasets
 
 def test_copied_assets_are_real_and_sha256_valid():
-    assert len(verify_assets())==34
-    for folder in ('data','model','assets/matrices'):
-        m=read_json(ROOT/folder/'manifest.json')
+    from adam_mf.assets import catalog
+    assert len(verify_assets())==len(catalog()['files'])+3
+    p=load_config()['paths']
+    for folder in (local_path(p['data']),local_path(p['cv_model']).parent,local_path(p['matrices'])):
+        m=read_json(folder/'manifest.json')
         assert m['total_bytes']>0
         for row in m['files']:assert not (ROOT/row['path']).is_symlink()
 
@@ -22,7 +24,7 @@ def test_all_methods_share_formal_order():
     c=next(c for c in cfgs if c.task=='nlp');training,valid,order=nlp_datasets(c)
     assert len(training)==62000 and len(valid)==872
     assert training.tensors[0].shape==(62000,128)
-    with np.load(ROOT/'data/preprocessed/nlp_split.npz') as s:
+    with np.load(local_path(load_config()['paths']['preprocessed'])/'nlp_split.npz') as s:
         assert len(set(s['train'])&set(s['search_validation']))==0
         expected=s['train'][torch.randperm(62000,generator=torch.Generator().manual_seed(c.seed)).numpy()]
     np.testing.assert_array_equal(order,expected)
@@ -30,8 +32,8 @@ def test_all_methods_share_formal_order():
 def test_local_tokenizer_matches_copied_tokens():
     import pandas as pd
     from transformers import BertTokenizer
-    raw=pd.read_parquet(ROOT/'data/sst2/train.parquet').iloc[[0,123,4567]]
-    tok=BertTokenizer.from_pretrained(str(ROOT/'model/bert-tiny'),local_files_only=True)
+    raw=pd.read_parquet(local_path(load_config()['paths']['data'])/'sst2/train.parquet').iloc[[0,123,4567]]
+    tok=BertTokenizer.from_pretrained(str(local_path(load_config()['paths']['nlp_model'])),local_files_only=True)
     actual=tok(raw['sentence'].tolist(),padding='max_length',max_length=128,truncation=True,return_tensors='pt')
-    old=torch.load(ROOT/'data/preprocessed/nlp_tokens_128.pt',weights_only=True)
+    old=torch.load(local_path(load_config()['paths']['preprocessed'])/'nlp_tokens_128.pt',weights_only=True)
     for k,v in actual.items():torch.testing.assert_close(v,old[k][[0,123,4567]],rtol=0,atol=0)

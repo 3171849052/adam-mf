@@ -65,5 +65,7 @@
     "status": "paused",
     "coordinator_exited": true,
     "formal_training_started": false
-  }
+  },
+  "scope": "historical_round_2",
+  "superseded_by": "docs/engineering_validation.json"
 }

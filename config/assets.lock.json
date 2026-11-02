@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "data/cifar100/cifar-100-python/train",
+      "bytes": 155249918,
+      "sha256": "735e79b04f092ca3d2e6d07f368c0a7d70d48c48d28865950cc24454cf45129b",
+      "kind": "cifar-member",
+      "member": "cifar-100-python/train"
+    },
+    {
+      "path": "data/cifar100/cifar-100-python/test",
+      "bytes": 31049707,
+      "sha256": "4b67687d9933c4db8f0831104447f15b93774f4f464bd0516f0f0f2ac83b7864",
+      "kind": "cifar-member",
+      "member": "cifar-100-python/test"
+    },
+    {
+      "path": "data/cifar100/cifar-100-python/meta",
+      "bytes": 1473,
+      "sha256": "a5d4786345c961390f865e93b434dbd5c6904ce880667e0cb888c97d449f28b9",
+      "kind": "cifar-member",
+      "member": "cifar-100-python/meta"
+    },
+    {
+      "path": "data/sst2/train.parquet",
+      "bytes": 3110468,
+      "sha256": "66a253e67968acfabcbe49dbe9da964b42ac1c851c40ab760e8c8942efdb3229",
+      "kind": "download",
+      "url": "https://huggingface.co/datasets/nyu-mll/glue/resolve/bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/train-00000-of-00001.parquet"
+    },
+    {
+      "path": "data/sst2/validation.parquet",
+      "bytes": 72819,
+      "sha256": "a1371f3b3a7b0bcefa8388799a9359dc3ce76c349cc0079507a7991364fd2a9b",
+      "kind": "download",
+      "url": "https://huggingface.co/datasets/nyu-mll/glue/resolve/bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2/validation-00000-of-00001.parquet"
+    },
+    {
+      "path": "data/preprocessed/cv_split.npz",
+      "bytes": 400530,
+      "sha256": "205005831d63a9aa17091038faefc8e87c3cf38b5b99e24c8782c50b2614744e",
+      "kind": "prepared",
+      "content": {
+        "train": {
+          "shape": [
+            45000
+          ],
+          "dtype": "int64",
+          "sha256": "f33e2c888dee236de6860444931c2070e3b7f07ad46182367f0e15abea844eae"
+        },
+        "search_validation": {
+          "shape": [
+            5000
+          ],
+          "dtype": "int64",
+          "sha256": "ad61b8152429b9c3b91543f3aac2c608c16ddd0fe9720adaec7c565f908d16e8"
+        }
+      }
+    },
+    {
+      "path": "data/preprocessed/nlp_split.npz",
+      "bytes": 539322,
+      "sha256": "fe7597fa24b465bb5f28300ddc34cb76265b19e098f587b1c0b6bb288d127e6a",
+      "kind": "prepared",
+      "content": {
+        "train": {
+          "shape": [
+            62000
+          ],
+          "dtype": "int64",
+          "sha256": "fc9326db4c8882b78cf7a478c95c1550a842a33c5230369be16eb3f7ae3725f0"
+        },
+        "search_validation": {
+          "shape": [
+            5349
+          ],
+          "dtype": "int64",
+          "sha256": "40ef9407b344ff83b3ba042bb1ad033086bc68727c6b3a96120855c46066d213"
+        }
+      }
+    },
+    {
+      "path": "data/preprocessed/nlp_tokens_128.pt",
+      "bytes": 207437347,
+      "sha256": "8bc80358e62658803e15f0ddbfaa447d18b54974916a8afed8fc7f5d047ae56b",
+      "kind": "prepared",
+      "content": {
+        "input_ids": {
+          "shape": [
+            67349,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "80ef84c9df5eb3f0393cbd84a7c05e4b9014fc39b45f63b109d3250a84c17100"
+        },
+        "token_type_ids": {
+          "shape": [
+            67349,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "895c7895f51bd2ea6f0bdd357fbfdb8ba6fd149bbb8815d1e876a720fcf2e9b1"
+        },
+        "attention_mask": {
+          "shape": [
+            67349,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "c4114990db44be7801c0c04a6eaaffd432d56c7280e793686ef173089949c408"
+        },
+        "labels": {
+          "shape": [
+            67349
+          ],
+          "dtype": "int64",
+          "sha256": "c4842e7ec802003e8f56d509e17512c0c611232d20287485e51ae726566730b1"
+        }
+      }
+    },
+    {
+      "path": "data/preprocessed/nlp_official_tokens_128.pt",
+      "bytes": 2688381,
+      "sha256": "4fe790af8f9c554d7e0d550f6b16fa91a8b5b1f9ab084fd8a547292004062bd9",
+      "kind": "prepared",
+      "content": {
+        "input_ids": {
+          "shape": [
+            872,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "6a9aaa3d2babc0f0d7c643a2f664bc189e47b46983c7d8a2ef772d804a58f6c8"
+        },
+        "token_type_ids": {
+          "shape": [
+            872,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "0f4ebe3cd683e66bfcebcdf4a491a708692faad6fd274752cd86db54e19b12e6"
+        },
+        "attention_mask": {
+          "shape": [
+            872,
+            128
+          ],
+          "dtype": "int64",
+          "sha256": "8202d4131313bfd7317d90d65f6677357df794982cbc655fd2e9833bd14b463a"
+        },
+        "labels": {
+          "shape": [
+            872
+          ],
+          "dtype": "int64",
+          "sha256": "4a1b88109da8fa5187fd97a9625911d20c99c880e638addfeb1de16a2260967d"
+        }
+      }
+    },
+    {
+      "path": "model/bert-tiny/config.json",
+      "bytes": 285,
+      "sha256": "cf3179684f7c360dd6185962d480e7d426ceb8fe49f5db7b64bdc15dba0b8798",
+      "kind": "download",
+      "url": "https://huggingface.co/prajjwal1/bert-tiny/resolve/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837/config.json"
+    },
+    {
+      "path": "model/bert-tiny/pytorch_model.bin",
+      "bytes": 17756393,
+      "sha256": "dab2c2bddcfb48ea430ef63fd76d46d67d704487844d967256a50dd7d7fd0a66",
+      "kind": "download",
+      "url": "https://huggingface.co/prajjwal1/bert-tiny/resolve/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837/pytorch_model.bin"
+    },
+    {
+      "path": "model/bert-tiny/tokenizer.json",
+      "bytes": 711396,
+      "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "kind": "bundled",
+      "source": "config/tokenizer/tokenizer.json"
+    },
+    {
+      "path": "model/bert-tiny/tokenizer_config.json",
+      "bytes": 377,
+      "sha256": "86edfbd1d109094d4ea6a04c83822681bd05e495ced8de2cbcd6fea518da3440",
+      "kind": "bundled",
+      "source": "config/tokenizer/tokenizer_config.json"
+    },
+    {
+      "path": "model/bert-tiny/vocab.txt",
+      "bytes": 231508,
+      "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+      "kind": "download",
+      "url": "https://huggingface.co/prajjwal1/bert-tiny/resolve/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837/vocab.txt"
+    },
+    {
+      "path": "model/vit-tiny/model.safetensors",
+      "bytes": 22883348,
+      "sha256": "fecf81b492bd13ee7a5297cb74d1d417aac8bf7e1b7d96aed89c4691984587ed",
+      "kind": "download",
+      "url": "https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/resolve/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106/model.safetensors"
+    },
+    {
+      "path": "assets/matrices/identity_iid_T250.npz",
+      "bytes": 2001230,
+      "sha256": "5efe4a751c2916ae17373cfbd717c0c595d72b482ee1b4c8ea3afc3de1f90a03",
+      "kind": "matrix-member",
+      "member": "identity_iid_T250.npz"
+    },
+    {
+      "path": "assets/matrices/identity_iid_T250.json",
+      "bytes": 864,
+      "sha256": "f096e5d143d002611e288bc2ecdaa870c3c8529f8cd61acace83fb8674e99108",
+      "kind": "matrix-member",
+      "member": "identity_iid_T250.json"
+    },
+    {
+      "path": "assets/matrices/sgd_b2lt_T250.npz",
+      "bytes": 2001622,
+      "sha256": "a67784d759175af27baa5cdd2ce392f19beb67481148789f3850454c7f6f85a4",
+      "kind": "matrix-member",
+      "member": "sgd_b2lt_T250.npz"
+    },
+    {
+      "path": "assets/matrices/sgd_b2lt_T250.json",
+      "bytes": 147160,
+      "sha256": "05183d2a7a93a23e14847f6f954207bdb24717de908f70f47cb25d4cdea616bd",
+      "kind": "matrix-member",
+      "member": "sgd_b2lt_T250.json"
+    },
+    {
+      "path": "assets/matrices/momentum_b2lt_T250.npz",
+      "bytes": 2001622,
+      "sha256": "12382de4e2cb90216b15f57099fd544369b50715a9a0316523037913b67c730c",
+      "kind": "matrix-member",
+      "member": "momentum_b2lt_T250.npz"
+    },
+    {
+      "path": "assets/matrices/momentum_b2lt_T250.json",
+      "bytes": 147356,
+      "sha256": "c7e9ced189a942b7d127877289b4acc929c446cf741972940db85d14a7366a98",
+      "kind": "matrix-member",
+      "member": "momentum_b2lt_T250.json"
+    },
+    {
+      "path": "assets/matrices/momentum-bias_b2lt_T250.npz",
+      "bytes": 2001622,
+      "sha256": "f788586c318d5c901973950945849852aa6ab18964d23ab64dbe259e88e5a819",
+      "kind": "matrix-member",
+      "member": "momentum-bias_b2lt_T250.npz"
+    },
+    {
+      "path": "assets/matrices/momentum-bias_b2lt_T250.json",
+      "bytes": 146924,
+      "sha256": "2af4076eca1de1aae9dd617f75846f83c4385580852f8e4dfe31d8e3a664c8fd",
+      "kind": "matrix-member",
+      "member": "momentum-bias_b2lt_T250.json"
+    },
+    {
+      "path": "assets/matrices/identity_iid_T310.npz",
+      "bytes": 3076430,
+      "sha256": "a38878110a6549d920d83d9772a2c2be82959a3ebc9dc2a8a8e687fd913a1cff",
+      "kind": "matrix-member",
+      "member": "identity_iid_T310.npz"
+    },
+    {
+      "path": "assets/matrices/identity_iid_T310.json",
+      "bytes": 864,
+      "sha256": "d139b26409f59fba71e734d55081d1aa63f8652e84cc74491544508a280f8026",
+      "kind": "matrix-member",
+      "member": "identity_iid_T310.json"
+    },
+    {
+      "path": "assets/matrices/sgd_b2lt_T310.npz",
+      "bytes": 3076918,
+      "sha256": "2070e53ff406d8f38bac230f6c812f2f616580e449094f8986d82e5c1f7a280e",
+      "kind": "matrix-member",
+      "member": "sgd_b2lt_T310.npz"
+    },
+    {
+      "path": "assets/matrices/sgd_b2lt_T310.json",
+      "bytes": 48151,
+      "sha256": "6cd673f7748709ed05e222de7259a2207fcd3a82e07fcb245276a37714e60be2",
+      "kind": "matrix-member",
+      "member": "sgd_b2lt_T310.json"
+    },
+    {
+      "path": "assets/matrices/momentum_b2lt_T310.npz",
+      "bytes": 3076918,
+      "sha256": "ea9f642d22354c1133a3c75ee1af20721f3f00820d89e91d6e2e9821603e864e",
+      "kind": "matrix-member",
+      "member": "momentum_b2lt_T310.npz"
+    },
+    {
+      "path": "assets/matrices/momentum_b2lt_T310.json",
+      "bytes": 147887,
+      "sha256": "f502117691bf8f27f4bf6788ad1a6ce1fb83cf85b44bc8079244379de54e74ae",
+      "kind": "matrix-member",
+      "member": "momentum_b2lt_T310.json"
+    },
+    {
+      "path": "assets/matrices/momentum-bias_b2lt_T310.npz",
+      "bytes": 3076918,
+      "sha256": "0ac7bd776f063a29fadc1c41261f5a6375bbf819e0ca39fcbcf8494a26490139",
+      "kind": "matrix-member",
+      "member": "momentum-bias_b2lt_T310.npz"
+    },
+    {
+      "path": "assets/matrices/momentum-bias_b2lt_T310.json",
+      "bytes": 147004,
+      "sha256": "0c3a1ed98d9087fa9ea15bdb9d4071f8d9c36f77f3ded3b73ef9b4bf511038ad",
+      "kind": "matrix-member",
+      "member": "momentum-bias_b2lt_T310.json"
+    },
+    {
+      "path": "model/vit-tiny/config.json",
+      "kind": "download",
+      "bytes": 586,
+      "sha256": "e328e0f3717427f87898184cd8eba835526a8deaaba703b5066b307afea10e80",
+      "url": "https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/resolve/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106/config.json"
+    }
+  ],
+  "matrix_bundle": {
+    "path": "resources/matrices-v1.tar.gz",
+    "bytes": 776606,
+    "sha256": "6e84b92685583296299d335749c502a15de2b566d685d9ad83ca778cf8ef724b"
+  },
+  "cifar_archive": {
+    "url": "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
+    "bytes": 169001437,
+    "sha256": "85cd44d02ba6437773c5bbd22e183051d648de2e7d6b014e1ef29b855ba677a7",
+    "mirrors": [
+      "https://huggingface.co/datasets/nakroy/cifar100-python/resolve/201a32345d2c6b970e1a36c582930c83e09c96d2/cifar-100-python.tar.gz"
+    ]
+  }
+}

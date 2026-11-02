@@ -115,5 +115,7 @@
       "historical_records_checked": 10
     }
   ],
-  "accuracy_values_imported": false
+  "accuracy_values_imported": false,
+  "scope": "historical_round_2",
+  "superseded_by": "docs/config_preservation.json"
 }

@@ -1,0 +1,233 @@
+{
+  "status": "passed",
+  "date": "2026-11-02",
+  "formal_training_started": false,
+  "formal_training_records": 0,
+  "ready_for_formal_preflight": true,
+  "config_preservation": {
+    "status": "passed",
+    "baseline_sha256": "d25df31beebcb022b7c74ae88c2e971dbacd828be6433abac7028a61c62dc9f1",
+    "current_sha256": "4de4623c6e7f6756a86f0e6c2ed6bc082c2577f3adf98a61ebfe7554e3d909bf",
+    "experiment_parameters_sha256": "1ed31e464c6cfbe1102489efcf684a407e710ed1063899bf24e2160f4ccbd564",
+    "all_original_experiment_parameters_unchanged": true,
+    "allowed_sections": [
+      "runtime",
+      "paths"
+    ]
+  },
+  "locked_dependencies": 78,
+  "curve": {
+    "passed": 104,
+    "log": "logs/curve_final_tests.log",
+    "sha256": "734c4f43ee662061be91f720f662df50ce2814f0e036bc3e1bd1ea6476116a46"
+  },
+  "adam_mf": {
+    "passed": 104,
+    "log": "outputs/runs/dry-20261102-191853-656405-1339031/logs/unit_tests.log",
+    "sha256": "81003475dfcdfe4767d50ae7dc1dfa68ab552567415db80fe44fb38fca4acf6e"
+  },
+  "setup": {
+    "created_clean_environment": true,
+    "validated_using_official_wheels_and_pip_cache": true,
+    "log": "logs/setup_env_final.log",
+    "exit_code": 0,
+    "existing_environment_not_recreated": true,
+    "existing_dependencies_unchanged": true
+  },
+  "cuda_per_physical_gpu": {
+    "0": {
+      "passed": 59,
+      "log": "logs/final_cuda_gpu_0_tests.log",
+      "sha256": "f69245884e486693b3e690fd8c8cdf9186b203abe2365524b9e9c11a6ea9d760"
+    },
+    "1": {
+      "passed": 59,
+      "log": "logs/final_cuda_gpu_1_tests.log",
+      "sha256": "c1f485c3d16738a8650ddae5ed59dbb0a851a67bece2edf9719672f0da8fed45"
+    },
+    "2": {
+      "passed": 59,
+      "log": "logs/final_cuda_gpu_2_tests.log",
+      "sha256": "22fe797743e1e9f4d8d2222600e2ef20db6ef463fcf59c9588f46090f78d85a8"
+    },
+    "3": {
+      "passed": 59,
+      "log": "logs/final_cuda_gpu_3_tests.log",
+      "sha256": "1b489699aa2820a90f4fb40459785d5e4557de441dcf4510a01c8059b046eec6"
+    }
+  },
+  "gpus": [
+    {
+      "id": 0,
+      "uuid": "GPU-bb24c6dd-b3e9-d35e-f544-bb53c11078c6",
+      "name": "NVIDIA GeForce RTX 3080 Ti",
+      "total_mb": 12288,
+      "free_mb": 11922,
+      "driver": "570.133.20",
+      "cuda_test": {
+        "exit_code": 0,
+        "output": "{\"name\": \"NVIDIA GeForce RTX 3080 Ti\", \"uuid\": \"bb24c6dd-b3e9-d35e-f544-bb53c11078c6\"}"
+      }
+    },
+    {
+      "id": 1,
+      "uuid": "GPU-015dd2bc-e3fc-8a3a-9ec6-ae5664031a54",
+      "name": "NVIDIA GeForce RTX 3080 Ti",
+      "total_mb": 12288,
+      "free_mb": 11922,
+      "driver": "570.133.20",
+      "cuda_test": {
+        "exit_code": 0,
+        "output": "{\"name\": \"NVIDIA GeForce RTX 3080 Ti\", \"uuid\": \"015dd2bc-e3fc-8a3a-9ec6-ae5664031a54\"}"
+      }
+    },
+    {
+      "id": 2,
+      "uuid": "GPU-9cee712b-b39b-6d0a-29fb-1aaeb8bffa8e",
+      "name": "NVIDIA GeForce RTX 3080 Ti",
+      "total_mb": 12288,
+      "free_mb": 11922,
+      "driver": "570.133.20",
+      "cuda_test": {
+        "exit_code": 0,
+        "output": "{\"name\": \"NVIDIA GeForce RTX 3080 Ti\", \"uuid\": \"9cee712b-b39b-6d0a-29fb-1aaeb8bffa8e\"}"
+      }
+    },
+    {
+      "id": 3,
+      "uuid": "GPU-b3ecad2a-94d8-b1d0-dad1-627eaa34f4fa",
+      "name": "NVIDIA GeForce RTX 3080 Ti",
+      "total_mb": 12288,
+      "free_mb": 11922,
+      "driver": "570.133.20",
+      "cuda_test": {
+        "exit_code": 0,
+        "output": "{\"name\": \"NVIDIA GeForce RTX 3080 Ti\", \"uuid\": \"b3ecad2a-94d8-b1d0-dad1-627eaa34f4fa\"}"
+      }
+    }
+  ],
+  "default_interpreter": "/home/longt29/miniconda3/envs/adam-mf/bin/python",
+  "asset_hashes_verified": 35,
+  "asset_catalog_sha256": "be4518d58ef9bef7a2025dc9163c78754de2b03d9f0a1dbd2eec3ba51dde8c26",
+  "download_validation": {
+    "real_public_downloads": true,
+    "fresh_asset_directory": true,
+    "prepared_tensor_and_split_hashes_equal": true,
+    "http_range_retry_and_rejection_tests": true,
+    "idempotent_asset_and_manifest_hashes": true,
+    "offline_models": true
+  },
+  "scheduler": {
+    "configured_physical_gpu_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "global_limit": 4,
+    "per_gpu_limit": 1,
+    "unified_queue": true,
+    "inherited_flock": true,
+    "missing_gpu_rejected": true,
+    "unconfigured_worker_gpu_rejected": true
+  },
+  "recovery": {
+    "eight_methods_exact_synthetic_engine_resume": true,
+    "cpu_cuda_noise_state_resume": true,
+    "config_code_asset_tampering_rejected": true,
+    "physical_gpu_uuid_affinity": true
+  },
+  "generated_tasks": 160,
+  "tasks_by_family": {
+    "cv": 80,
+    "nlp": 80
+  },
+  "seeds_per_group": {
+    "cv/adam-no-noise": 10,
+    "cv/momentum-no-noise": 10,
+    "cv/adam-iid": 10,
+    "cv/momentum-iid": 10,
+    "cv/adam-mf-sgd-b2lt": 10,
+    "cv/adam-mf-sgd-stp-b2lt": 10,
+    "cv/stpex-mf-momentum-bias-b2lt": 10,
+    "cv/momentum-mf-momentum-b2lt": 10,
+    "nlp/adam-no-noise": 10,
+    "nlp/momentum-no-noise": 10,
+    "nlp/adam-iid": 10,
+    "nlp/momentum-iid": 10,
+    "nlp/adam-mf-sgd-b2lt": 10,
+    "nlp/adam-mf-sgd-stp-b2lt": 10,
+    "nlp/stpex-mf-momentum-bias-b2lt": 10,
+    "nlp/momentum-mf-momentum-b2lt": 10
+  },
+  "final_dry_run": "outputs/runs/dry-20261102-191853-656405-1339031",
+  "final_dry_run_status": {
+    "status": "dry_run_complete",
+    "planned": 160,
+    "completed": 0,
+    "training_started": false
+  },
+  "final_identity": {
+    "gpus": [
+      {
+        "id": 0,
+        "uuid": "GPU-bb24c6dd-b3e9-d35e-f544-bb53c11078c6",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
+        "total_mb": 12288,
+        "driver": "570.133.20"
+      },
+      {
+        "id": 1,
+        "uuid": "GPU-015dd2bc-e3fc-8a3a-9ec6-ae5664031a54",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
+        "total_mb": 12288,
+        "driver": "570.133.20"
+      },
+      {
+        "id": 2,
+        "uuid": "GPU-9cee712b-b39b-6d0a-29fb-1aaeb8bffa8e",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
+        "total_mb": 12288,
+        "driver": "570.133.20"
+      },
+      {
+        "id": 3,
+        "uuid": "GPU-b3ecad2a-94d8-b1d0-dad1-627eaa34f4fa",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
+        "total_mb": 12288,
+        "driver": "570.133.20"
+      }
+    ],
+    "config_hash": "b94f4ac5be1e19ee2dc55a9672f99777cb9564d17f0c35f2ce3e43866ab23ae4",
+    "code_hash": "ea6f85749b70e9ded37f7b989167b66110c3e04155865dc6d8163551badd605c",
+    "asset_hash": "bf5d491afc98ba10807ec288994eb6f705b696f31288834881d4bee92a4e250f",
+    "model_hashes": {
+      "cv": "8534726bced1166b675a7f97f4d47bc7e4f77dff17ff76957675145e022e355a",
+      "nlp": "4728883adcf9619f74101af9db659963aa6b3c25091874f7866ff28686decbf9"
+    },
+    "environment": {
+      "python": "3.11.18",
+      "packages": {
+        "torch": "2.13.0+cu126",
+        "torchvision": "0.28.0+cu126",
+        "timm": "1.0.29",
+        "transformers": "5.15.0",
+        "opacus": "1.6.0",
+        "numpy": "2.4.4",
+        "scipy": "1.17.1",
+        "scikit-learn": "1.9.0",
+        "pandas": "3.0.5",
+        "pyarrow": "25.0.1",
+        "safetensors": "0.8.0",
+        "PyYAML": "6.0.3",
+        "matplotlib": "3.11.1"
+      }
+    }
+  },
+  "source_files_unchanged": 27,
+  "known_limitations": [
+    "160 formal trainings intentionally not started; real full-batch training peaks/results remain to be measured",
+    "Existing unrelated dp-muon-correlated/Optax conflict in curve was recorded and left unchanged",
+    "Changes are local and have not been committed or pushed"
+  ]
+}
