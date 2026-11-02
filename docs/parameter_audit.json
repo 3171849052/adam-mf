@@ -1,0 +1,119 @@
+{
+  "status": "passed",
+  "configuration_hash": "5944e4f0ba90d9cdf1162a1754a40f0bb0176461a94d3e24312f39bfedc80bbe",
+  "groups": [
+    {
+      "task": "cv",
+      "method": "adam-no-noise",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "momentum-no-noise",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "adam-iid",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "momentum-iid",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "adam-mf-sgd-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "adam-mf-sgd-stp-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "stpex-mf-momentum-bias-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "cv",
+      "method": "momentum-mf-momentum-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "adam-no-noise",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "momentum-no-noise",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "adam-iid",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "momentum-iid",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "adam-mf-sgd-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "adam-mf-sgd-stp-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "stpex-mf-momentum-bias-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    },
+    {
+      "task": "nlp",
+      "method": "momentum-mf-momentum-b2lt",
+      "frozen_parameters_match": true,
+      "historical_formal_parameters_match": true,
+      "historical_records_checked": 10
+    }
+  ],
+  "accuracy_values_imported": false
+}

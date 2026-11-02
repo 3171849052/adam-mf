@@ -1,0 +1,41 @@
+{
+  "inspected_sha256": {
+    "exp15c/protocol.md": "7f67762a16074bffed8ad4a96bb2522a4c77b6cfd23975bf2b50e368ad176359",
+    "exp15c/config.py": "f44a23ac0d1f44b6b7d18bbbac2669bc7f2766ec8996660f9b880a4a8b39158e",
+    "exp15c/optimizer.py": "f9f5e354b9e5aa6c7726a52e6c188c02f8a0583b496fcf018c15a4b642e7479d",
+    "exp15c/train.py": "95ba863c4169f0b14894c2f1c902357c9e48f6ee509096cf4f3d530b3c2b894e",
+    "exp15c/cv_model.py": "de7b23603dc94b1f5b6000a85d8f8b4485a5a81b1e9fcfdabf96daa21cf4d38c",
+    "exp15c/nlp_model.py": "204e16253c2a3e6fab07128bcb8b949856931dbf64b880d9d3783eead9c745c1",
+    "exp15c/data.py": "da54d227ee7fb074ead5f1ab1e6c5f6df1cc441afd50919195c138f50060132f",
+    "exp15c/results/selected_configs.json": "46d4ebcb2cfd2826033d7b4bd24c02d60019ae557fb2781aee142a52c15e1593",
+    "exp15c/results/formal_results.json": "252cef74c919bd3a4ae4d1ffbeacab74483e497164bdb6cb8a927577678e976a",
+    "exp15c/results/final_report.md": "826bb73b06e34a149ff890b990e790befba4cd0832105f0ededffd1eac42a836",
+    "exp16e/protocol.json": "0af1a416e76f64430a17fe1536b12782aee823fff984c828553380d0ecb98c06",
+    "exp16e/config.py": "9635293f3e322b09f9fa83f42496e774b2ba5d7d84749b34fbd41af792e6fac3",
+    "exp16e/optimizer.py": "8cf2917eb9eaa1dc96063b18dba3024a17e01cb7d4b0ac0280c9a8fa42632c1a",
+    "exp16e/momentum_optimizer.py": "f9f5e354b9e5aa6c7726a52e6c188c02f8a0583b496fcf018c15a4b642e7479d",
+    "exp16e/stpex_optimizer.py": "10d9b2a008dcdc09ec604475a30206e475d2471fe0ca29da5d4dae02d634b89a",
+    "exp16e/clipping.py": "a17abb8a2a88729e662185578c915750d2c506e31316cde415b6f8ccc5e17999",
+    "exp16e/noise.py": "e689e3a04deae96832678a1c8abf4942ae148af50b536f8387fe9a437a09fb45",
+    "exp16e/privacy.py": "6e37e95ccb496245174249f30f9c3237fb809b30a031a5092e462debf2d9ac5a",
+    "exp16e/matrices.py": "3398f034bbf2af71d3470843109e5932af358d77b399afd12641e12e53af3e69",
+    "exp16e/train.py": "e6fe518596d5f0a0185b9ca0ef83eb381c8b9aed3666b2aaae463f25e034ac09",
+    "exp16e/cv_model.py": "de7b23603dc94b1f5b6000a85d8f8b4485a5a81b1e9fcfdabf96daa21cf4d38c",
+    "exp16e/nlp_model.py": "3c7a984ebc2eef1e9d71870b46a872674229f1dd9920561920edd035829f3e3d",
+    "exp16e/data.py": "5bc2f0599790cc2a312341e17beafe27d20009fd1846c9e6aa13673eee802d0b",
+    "exp16e/assets.py": "fa59f900be8e284fc95fdc0e111a7c297ec177d174be9afd0c3a7694e18628ad",
+    "exp16e/results/final_freeze.json": "daea2aef5bce413f8da22c0288b707ea455f5a0d26f81bffda0408531970c94e",
+    "exp16e/results/formal_per_seed.csv": "b9ef98739d40b2e69f92b3e1741c05209cc97f919726131dfb60cd7d3c789ea6",
+    "exp16e/results/final_report.md": "b0b17c706023476e5a80649bfc575a4e55c03010fd8d522c012f4c9c950e4f64"
+  },
+  "migration": {
+    "exp16e/clipping.py": "privacy/clipping.py",
+    "exp16e/privacy.py": "privacy/accountant.py",
+    "exp16e/noise.py": "privacy/noise_b2lt.py",
+    "exp16e/cv_model.py": "models/vit_tiny.py",
+    "exp16e/nlp_model.py": "models/bert_tiny.py",
+    "exp16e/stpex_optimizer.py": "optimizers/stpex.py",
+    "exp15c/optimizer.py": "optimizers/momentum.py",
+    "exp16e/optimizer.py": "optimizers/adam.py"
+  }
+}

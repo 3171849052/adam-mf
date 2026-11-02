@@ -1,0 +1,69 @@
+{
+  "status": "passed",
+  "formal_training_started": false,
+  "formal_training_records": 0,
+  "generated_formal_tasks": 160,
+  "full_test_suite": {
+    "passed": 79,
+    "warnings": 33,
+    "seconds": 95.47
+  },
+  "gpu_algorithms": {
+    "passed": 55
+  },
+  "noise_recovery_cpu_cuda": {
+    "passed": 13
+  },
+  "frozen_parameter_groups_checked": 16,
+  "source_files_unchanged": 29,
+  "asset_hashes_verified": 34,
+  "preprocessing": {
+    "all_token_tensors_equal": true,
+    "split_indices_equal": true
+  },
+  "startup_run": "outputs/runs/dry-20261102-162149-874761-1100796",
+  "identity": {
+    "config_hash": "5944e4f0ba90d9cdf1162a1754a40f0bb0176461a94d3e24312f39bfedc80bbe",
+    "code_hash": "05b8fbec537e3cef7f23962f91c72d1c6143015b106d6a40a480be36a8c9edb6",
+    "asset_hash": "6c34376d235491a4728f83ced9b7d931ce8f424e31eb5f0d2ed1e992f690dcc1",
+    "model_hashes": {
+      "cv": "eb6e02f22b546f318eb828efe847524baf0858c8e2d8f6d8499a6ff47f507275",
+      "nlp": "4728883adcf9619f74101af9db659963aa6b3c25091874f7866ff28686decbf9"
+    },
+    "environment": {
+      "python": "3.11.15",
+      "packages": {
+        "torch": "2.13.0+cu126",
+        "torchvision": "0.28.0+cu126",
+        "timm": "1.0.29",
+        "transformers": "5.15.0",
+        "opacus": "1.6.0",
+        "numpy": "2.4.4",
+        "scipy": "1.17.1",
+        "scikit-learn": "1.9.0",
+        "pandas": "3.0.5",
+        "pyarrow": "25.0.1",
+        "safetensors": "0.8.0",
+        "PyYAML": "6.0.3",
+        "matplotlib": "3.11.1"
+      }
+    }
+  },
+  "tests_log_sha256": "37f367688f73cd96328d0dca9a24150b7afa11bf9f46b8aafcdc58508d45e2ce",
+  "startup_status": {
+    "status": "dry_run_complete",
+    "planned": 160,
+    "completed": 0,
+    "training_started": false
+  },
+  "known_limitations": [
+    "160 formal trainings intentionally not started",
+    "Git LFS unavailable on this host"
+  ],
+  "stop_test": {
+    "run": "outputs/runs/dry-20261102-162414-330554-1113501",
+    "status": "paused",
+    "coordinator_exited": true,
+    "formal_training_started": false
+  }
+}
