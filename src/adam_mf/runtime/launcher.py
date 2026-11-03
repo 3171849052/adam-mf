@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 import yaml
 from adam_mf.paths import ROOT,local_path
-from adam_mf.config import load_config,plan
+from adam_mf.config import load_config,plan,StrictLoader
 from adam_mf.audit import atomic_json,atomic_text,read_json,code_hashes,json_hash,hash_session,file_hash
 from adam_mf.runtime.state import identity,check_identity,process_token,alive
 
@@ -22,7 +22,14 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
             candidate=local_path(read_json(last)['run_dir'])
             status=read_json(candidate/'status.json')['status'] if (candidate/'status.json').exists() else 'created'
             if status!='completed':
-                if json_hash(load_config(candidate/'config_snapshot.yaml'))!=json_hash(config) or read_json(candidate/'run_manifest.json')['code_sha256']!=code_hashes():raise ValueError('Resume refused: configuration/code changed')
+                # Historical snapshots may use an older schema. Compare their
+                # exact contents before applying any current-schema validation.
+                snapshot=yaml.load((candidate/'config_snapshot.yaml').read_text(),Loader=StrictLoader)
+                if json_hash(snapshot)!=json_hash(config) or read_json(candidate/'run_manifest.json')['code_sha256']!=code_hashes():
+                    print(f'Resume refused: configuration/code changed for {candidate.name}.\n'
+                          '使用当前版本开始独立实验：./start.sh --new-run（保留旧运行和检查点）。\n'
+                          '若要继续旧检查点，请恢复该运行原来的代码和配置；不会自动迁移检查点。',file=sys.stderr)
+                    return 2
                 run=candidate
         if run is None:
             run_id=('dry-' if dry_run else '')+datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S-%f')+f'-{os.getpid()}'
@@ -98,7 +105,7 @@ def pipeline(run,lock_fd,dry_run=False):
             atomic_json(run/'status.json',dict(previous,status='reporting'))
         from adam_mf.reporting.report import report
         audit=report(run,config,jobs,ident)
-        if complete and len(jobs)==160 and audit['status']!='passed':
+        if complete and len(jobs)==120 and audit['status']!='passed':
             atomic_json(run/'status.json',dict(status='audit_failed',completed=audit['completed'],planned=len(jobs)))
             raise RuntimeError('Training completed but final integrity audit did not pass')
         if complete and audit['status']=='passed':

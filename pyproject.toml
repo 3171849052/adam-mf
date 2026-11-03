@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "adam-mf"
 version = "0.1.0"
-description = "Offline reproduction of eight frozen optimizers on ten seeds"
+description = "Offline reproduction of six frozen optimizers on ten seeds"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "torch==2.13.0+cu126", "torchvision==0.28.0+cu126", "timm==1.0.29", "transformers==5.15.0",

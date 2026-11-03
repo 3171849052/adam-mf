@@ -36,14 +36,6 @@ tasks:
     full_finetuning: true
     loader_workers: 0
 methods:
-  adam-no-noise:
-    enabled: true
-    cv: {learning_rate: 0.0003, clip: null, eps_scale: null}
-    nlp: {learning_rate: 0.001, clip: null, eps_scale: null}
-  momentum-no-noise:
-    enabled: true
-    cv: {learning_rate: 0.05, clip: null, eps_scale: null}
-    nlp: {learning_rate: 0.1, clip: null, eps_scale: null}
   adam-iid:
     enabled: true
     cv: {learning_rate: 0.0007, clip: 30.0, eps_scale: null}

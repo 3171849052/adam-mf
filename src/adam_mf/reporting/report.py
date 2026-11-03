@@ -30,17 +30,17 @@ def report(run,config,jobs,identity):
     summary_fields=('task','method','completed_seeds','accuracy_mean','accuracy_sd','ci95_low','ci95_high','loss_mean','loss_sd','training_seconds','peak_memory_bytes')
     write_csv(run/'summary.csv',summaries,summary_fields)
     write_csv(run/'paired_differences.csv',pairs,('task','left','right','direction','n','mean','sd','ci95_low','ci95_high'))
-    full_plan=len(jobs)==160 and len({(j.task,j.method) for j in jobs})==16
+    full_plan=len(jobs)==120 and len({(j.task,j.method) for j in jobs})==12
     complete=len(results)==len(jobs) and not failures and all({r['seed'] for r in results if r['task']==t and r['method']==m}==set(config['seeds']) for t in ('cv','nlp') for m in METHODS)
-    audit=dict(status='passed' if complete and full_plan and all(x['matched'] for x in pair_audit) else 'incomplete',planned=len(jobs),completed=len(results),failed=len(failures),full_160_plan=full_plan,
+    audit=dict(status='passed' if complete and full_plan and all(x['matched'] for x in pair_audit) else 'incomplete',planned=len(jobs),completed=len(results),failed=len(failures),full_120_plan=full_plan,
                independent_new_training=True,all_artifact_hashes_verified=True,identity=identity,paired_rng_checks=pair_audit,
                seeds_per_group={f'{t}/{m}':sum(r['task']==t and r['method']==m for r in results) for t in ('cv','nlp') for m in METHODS})
     atomic_json(run/'audit/final_audit.json',audit)
     if results:plot(run,results,summaries)
-    text=['# adam-mf 正式实验报告','',f'完整性状态：{audit["status"]}；完成 {len(results)}/{len(jobs)} 个任务。仅当完整计划的 160 项全部成功且审计通过时，才算完成复现。','',
+    text=['# adam-mf 正式实验报告','',f'完整性状态：{audit["status"]}；完成 {len(results)}/{len(jobs)} 个任务。仅当完整计划的 120 项全部成功且审计通过时，才算完成复现。','',
           '## 实验配置','',f'完整配置见 config_snapshot.yaml；配置 SHA-256：`{identity["config_hash"]}`。',
           'CIFAR-100 / ViT-Tiny；SST-2 / BERT-Tiny。固定划分、相同十个种子、五轮、FP32、全参数微调。每步参数和裁剪阈值固定，无学习率调度。','',
-          '## 八种方法','']
+          '## 六种方法','']
     for name,m in METHODS.items():text.append(f'- {m.label}（`{name}`）：{m.optimizer}；'+(f'{m.mechanism} 噪声，{m.workload} workload，'+('缩放空间裁剪。' if m.scaled else '原空间裁剪。') if m.private else '普通优化器，无裁剪、无噪声、无 DP 包装器。'))
     for task in ('cv','nlp'):
         text += ['',f'## {task.upper()} 十种子结果','', '|方法|种子数|准确率均值 ± 样本SD (%)|95% Student-t CI (%)|交叉熵均值 ± SD|','|---|---:|---:|---|---|']
@@ -52,7 +52,7 @@ def report(run,config,jobs,identity):
             text.append(f'|{METHODS[s["method"]].label}|{s["completed_seeds"]}|{100*s["accuracy_mean"]:.3f} ± {sd}|{ci}|{s["loss_mean"]:.6f} ± {lsd}|')
     text += ['','## 方法比较','', '全部可配对方法的右减左差值与 95% Student-t 区间见 paired_differences.csv；配对前验证初始化、分类头、顺序和增强轨迹。NLP dropout 按 seed+100000+logical_step 重置。区间没有多重比较校正。各方法使用独立冻结参数，差异不能解释为单一机制的因果效应。官方评价集历史上已使用，本次不是新盲测。','',
              '## GPU 与耗时','',f'累计训练步骤耗时 {sum(r["training_time"] for r in results):.1f} 秒。每种方法的耗时、峰值显存见 summary.csv；逐任务 GPU 名称和编号见 formal_per_seed.csv。',
-             '', '## 隐私预算','',f'六种 DP 方法每次完整训练目标 ε={config["privacy"]["epsilon"]}、δ={config["privacy"]["delta"]}，GDP 校准，固定五轮参与，add/remove zero-out 邻接，不使用采样放大。十次训练或多种方法的组合不具有相同单次 ε 保证。无噪声组 ε、δ、裁剪比例留空，表示不适用。eps_scale 是内部缩放参数。梯度和裁剪诊断属于内部审计信息，不具有额外隐私发布保证。',
+             '', '## 隐私预算','',f'六种 DP 方法每次完整训练目标 ε={config["privacy"]["epsilon"]}、δ={config["privacy"]["delta"]}，GDP 校准，固定五轮参与，add/remove zero-out 邻接，不使用采样放大。十次训练或多种方法的组合不具有相同单次 ε 保证。eps_scale 是内部缩放参数。梯度和裁剪诊断属于内部审计信息，不具有额外隐私发布保证。',
              '', '## 完整性审计','', 'audit/final_audit.json 记录任务数、逐组完成数、资产/配置/代码/环境身份与配对随机轨迹检查。所有数值仅来自本仓库新执行的任务，未导入历史准确率。']
     atomic_text(run/'final_report.md','\n'.join(text)+'\n')
     return audit

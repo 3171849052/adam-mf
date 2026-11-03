@@ -13,9 +13,12 @@ from adam_mf.assets import download
 from adam_mf.runtime.scheduler import selected_gpus,simulation
 
 
-def test_original_experiment_parameters_unchanged():
+def test_remaining_experiment_parameters_unchanged():
     import yaml
     before=yaml.safe_load((ROOT/'docs/baseline/experiment.before.yaml').read_text());now=load_config()
+    for method in ('adam-no-noise','momentum-no-noise'):
+        before['methods'].pop(method)
+        assert method not in now['methods']
     before.pop('runtime');now.pop('runtime')
     assert before==now
 
@@ -61,10 +64,10 @@ def test_missing_gpu_never_falls_back():
     assert [g['id'] for g in selected_gpus(r,inventory+[dict(id=3),dict(id=9)])]==[0,1,2,3]
 
 
-def test_simulated_160_mixed_tasks_respect_family_capacity():
+def test_simulated_120_mixed_tasks_respect_family_capacity():
     c=load_config();jobs=plan(c)
     # Interleave task families to expose cross-family capacity bugs.
-    jobs=jobs[::2]+jobs[1::2];mixed=[v for pair in zip(jobs[:80],jobs[80:]) for v in pair]
+    jobs=jobs[::2]+jobs[1::2];mixed=[v for pair in zip(jobs[:60],jobs[60:]) for v in pair]
     result=simulation(c,mixed);active={};seen=set();completed=[]
     for e in result['events']:
         if e['event']=='start':
@@ -73,11 +76,11 @@ def test_simulated_160_mixed_tasks_respect_family_capacity():
             assert all(j.split('__')[0]==task for j in occupants)
             occupants.append(e['job']);seen.add(e['gpu'])
             assert len(occupants)<=c['runtime'][task+'_workers_per_gpu']
-            assert sum(map(len,active.values()))<=4
+            assert sum(map(len,active.values()))<=c['runtime']['max_parallel_tasks']
         else:
             active[e['gpu']].remove(e['job']);completed.append(e['job'])
             if not active[e['gpu']]:del active[e['gpu']]
-    assert seen=={0,1,2,3} and len(set(completed))==160 and not active
+    assert seen=={0,1,2,3} and len(set(completed))==120 and not active
 
 
 def test_selected_interpreter_has_no_implicit_fallback(tmp_path):
@@ -171,7 +174,7 @@ def test_preflight_failure_never_reaches_training(tmp_path,monkeypatch):
     def fail(*_):raise RuntimeError('Download failed: synthetic HTTP error')
     def train(*_):raise AssertionError('Training must not start after failed download')
     monkeypatch.setattr(launcher,'preflight',fail);monkeypatch.setattr(scheduler,'schedule',train)
-    atomic_json(tmp_path/'status.json',dict(status='created',planned=160,completed=0))
+    atomic_json(tmp_path/'status.json',dict(status='created',planned=120,completed=0))
     fd=os.open(tmp_path/'pipeline.lock',os.O_CREAT|os.O_RDWR,0o600)
     assert launcher.pipeline(tmp_path,fd)==1
     assert read_json(tmp_path/'status.json')['status']=='failed'

@@ -4,8 +4,6 @@
 
 |新方法 ID|优化器来源|批处理 / 噪声 / 裁剪来源|
 |---|---|---|
-|adam-no-noise|exp15c/optimizer.py 中 torch.optim.Adam|exp15c/optimizer.py 的无裁剪 CE 梯度和；exp15c/train.py|
-|momentum-no-noise|exp15c/optimizer.py Momentum|同上，无 DP 对象|
 |adam-iid|exp16e/optimizer.py 标准 Adam|exp16e/clipping.py、noise.py、privacy.py、train.py|
 |momentum-iid|exp16e/momentum_optimizer.py（与 exp15c 实现相同）|同上|
 |adam-mf-sgd-b2lt|exp16e/optimizer.py|同上，SGD workload 的 B²LT|
@@ -17,7 +15,7 @@
 
 Momentum：m=beta1*m+(1-beta1)*g，p+=-lr*m，无偏差修正、无 Nesterov。Adam 使用 torch.optim.Adam 的一、二阶偏差修正。STP-EX 使用 q（已在缩放空间裁剪加噪的平均梯度）更新 u；p-=lr*u/(1-beta1^t)；v=beta2*v+(1-beta2)*(d_prev*q)^2；d_prev=sqrt(vhat_prev)+eps_scale。Adam-STP 与 STP-EX 不可互换。
 
-参数核对：两种无噪声方法同时核对 exp15c/results/selected_configs.json 的 A/B 冻结值和 formal_results.json 中实际训练参数；六种 DP 方法核对 exp16e/results/final_freeze.json，并与 formal_per_seed.csv 核对。本轮严格保持开始修改时的 YAML；历史审核文件的旧配置哈希不代表本轮参数，当前保全证据见 config_preservation.json。
+参数核对：六种 DP 方法核对 exp16e/results/final_freeze.json，并与 formal_per_seed.csv 核对。已移除 adam-no-noise 和 momentum-no-noise，其余方法的冻结参数保持不变；历史审核文件的旧配置哈希不代表本轮参数，当前保全证据见 config_preservation.json。
 
 ## 发现的历史依赖和差异
 
@@ -28,7 +26,7 @@ Momentum：m=beta1*m+(1-beta1)*g，p+=-lr*m，无偏差修正、无 Nesterov。A
 - ViT 原缓存只有 safetensors 及 HF revision 链接，没有独立 architecture config 文件。下载固定 commit 对应的相同权重字节，另外保留同版本配置；继续用相同 timm 模型定义及原 cv_model.py 的严格映射，保留随机100类分类头。BERT 下载固定 commit 的权重、配置、词表，并复用随代码分发的本地生成 tokenizer 文件。没有下载替代版本。
 - exp15c 正式 CV 评价 batch=100；exp16e 正式 CV 评价 batch=physical_batch（250）；NLP 均=100。保留此差异，避免改变浮点归约次序。训练参数完全一致。
 - 原始 train.py 只保存末尾 checkpoint，原 README 明确仅任务边界恢复。本仓库扩展为完整逻辑步检查点。中途恢复时从 epoch 起点重放并丢弃已处理 microbatch，复原 worker 增强 RNG；随后恢复主线程 CPU/CUDA/Python/NumPy RNG、优化器、噪声 Generator 与 B²LT buffers。不会重新执行已完成 logical step 的优化器更新。独立合成数据测试比较中断/连续两条轨迹的逐步梯度、损失、参数与增强摘要。
-- 原始协议只对单次训练声明 ε=8；十次种子或八方法的组合没有相同预算保证。无噪声组不计算预算，CSV 留空。
+- 原始协议只对单次训练声明 ε=8；十次种子或六方法的组合没有相同预算保证。
 - 原历史报告使用过官方评价集。本项目不是新盲测，不复制其准确率、不自动修改任何参数。
 
 依赖版本固定为实际验证的版本，见 requirements.lock；对其他 GPU 架构/依赖版本不能承诺跨平台位级一致。恢复严格校验代码、依赖版本、配置和资产，环境发生变化会拒绝续训。

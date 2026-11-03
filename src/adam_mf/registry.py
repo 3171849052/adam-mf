@@ -8,8 +8,6 @@ class Method:
     workload:str='identity'
     scaled:bool=False
 METHODS={
- 'adam-no-noise':Method('Adam-No-Noise','adam',False),
- 'momentum-no-noise':Method('Momentum-No-Noise','momentum',False),
  'adam-iid':Method('Adam-IID','adam',True,'iid'),
  'momentum-iid':Method('Momentum-IID','momentum',True,'iid'),
  'adam-mf-sgd-b2lt':Method('Adam + SGD-B²LT','adam',True,'b2lt','sgd'),

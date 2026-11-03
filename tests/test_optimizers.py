@@ -1,10 +1,8 @@
 from config_helpers import load_config
-import copy
 import pytest
 import torch
 from adam_mf.config import plan
 from adam_mf.optimizers.builder import make_optimizer,logical_batch
-from adam_mf.optimizers.adam import unclipped_microbatch
 from adam_mf.registry import METHODS
 
 @pytest.mark.parametrize('name',list(METHODS))
@@ -39,15 +37,3 @@ def test_literal_formulas_and_one_noise(name):
         torch.testing.assert_close(p,x,rtol=2e-5,atol=2e-7)
         torch.testing.assert_close(opt.state[p]['exp_avg'],m)
         if cfg.spec.optimizer!='momentum':torch.testing.assert_close(opt.state[p]['exp_avg_sq'],v,rtol=2e-5,atol=1e-10)
-
-@pytest.mark.parametrize('name',['adam-no-noise','momentum-no-noise'])
-def test_baselines_are_ordinary_unclipped_sums(name):
-    cfg=next(j for j in plan(load_config()) if j.method==name)
-    model=torch.nn.Linear(2,2);reference=copy.deepcopy(model)
-    x=torch.tensor([[1000.,-2000.],[3000.,5000.]]);y=torch.tensor([0,1])
-    expected=torch.nn.functional.cross_entropy(reference(x),y,reduction='sum');expected.backward()
-    loss,clipped=unclipped_microbatch(model,x,y)
-    assert loss==float(expected.detach()) and clipped==0
-    for p,q in zip(model.parameters(),reference.parameters()):torch.testing.assert_close(p.grad,q.grad,rtol=0,atol=0)
-    logical=logical_batch(model,make_optimizer(model,cfg),cfg,None)
-    assert logical.noise is None and not cfg.private and cfg.clip is None

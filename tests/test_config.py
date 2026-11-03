@@ -6,11 +6,9 @@ from adam_mf.registry import METHODS
 
 def test_exact_formal_plan_and_frozen_values():
     c=load_config();jobs=plan(c)
-    assert len(METHODS)==8 and set(c['tasks'])=={'cv','nlp'} and len(c['seeds'])==10
-    assert len(jobs)==160 and len({j.id for j in jobs})==160
+    assert len(METHODS)==6 and set(c['tasks'])=={'cv','nlp'} and len(c['seeds'])==10
+    assert len(jobs)==120 and len({j.id for j in jobs})==120
     expected={
-      'adam-no-noise':[(.0003,None,None),(.001,None,None)],
-      'momentum-no-noise':[(.05,None,None),(.1,None,None)],
       'adam-iid':[(.0007,30,None),(.002,.3,None)],
       'momentum-iid':[(2,.3,None),(2,.3,None)],
       'adam-mf-sgd-b2lt':[(.003,30,None),(.01,40,None)],
@@ -31,7 +29,7 @@ def test_exact_formal_plan_and_frozen_values():
  lambda c:c['methods'].pop('adam-iid'),
  lambda c:c['methods'].update({'unknown':c['methods']['adam-iid']}),
  lambda c:c.update(seeds=c['seeds'][:9]),
- lambda c:c['methods']['adam-no-noise']['cv'].update(clip=1),
+ lambda c:c['methods']['adam-iid']['cv'].update(clip=None),
  lambda c:c['methods']['adam-iid']['cv'].update(learning_rate=float('nan')),
  lambda c:c['tasks']['cv'].update(physical_batch_size=333),
  lambda c:c['tasks']['nlp'].update(total_steps=250),
@@ -47,7 +45,7 @@ def test_invalid_config_stops(mutation):
 
 def test_enable_flags_only_reduce_formal_plan():
     c=load_config();c['tasks']['cv']['enabled']=False;c['methods']['adam-iid']['enabled']=False
-    assert len(plan(validate(c)))==70
+    assert len(plan(validate(c)))==50
 
 def test_duplicate_yaml_keys_are_rejected(tmp_path):
     p=tmp_path/'duplicate.yaml';p.write_text('schema_version: 1\nschema_version: 1\n')

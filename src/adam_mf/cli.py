@@ -4,7 +4,7 @@ from adam_mf.config import load_config,plan
 from adam_mf.audit import verify_assets
 
 def main():
-    parser=argparse.ArgumentParser(description='adam-mf: eight frozen methods, ten formal seeds, offline only')
+    parser=argparse.ArgumentParser(description='adam-mf: six frozen methods, ten formal seeds, offline only')
     sub=parser.add_subparsers(dest='command',required=True)
     for cmd in ('start','status','stop','validate','plan','verify-assets','verify-preprocessing','download-assets','prepare-data','check','simulate'):
         p=sub.add_parser(cmd);p.add_argument('--config',type=Path)

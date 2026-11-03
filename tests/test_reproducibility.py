@@ -17,7 +17,7 @@ class AugmentedSynthetic(Dataset):
     def __getitem__(self,i):
         return torch.tensor([i/20,random.random(),float(np.random.rand())])+torch.rand(3),torch.tensor(i%2)
 
-@pytest.mark.parametrize('method',['adam-no-noise','momentum-no-noise','adam-iid','momentum-iid','adam-mf-sgd-b2lt','adam-mf-sgd-stp-b2lt','stpex-mf-momentum-bias-b2lt','momentum-mf-momentum-b2lt'])
+@pytest.mark.parametrize('method',['adam-iid','momentum-iid','adam-mf-sgd-b2lt','adam-mf-sgd-stp-b2lt','stpex-mf-momentum-bias-b2lt','momentum-mf-momentum-b2lt'])
 def test_engine_exact_mid_epoch_resume(tmp_path,monkeypatch,method):
     # Exercise the actual engine on tiny CPU data; never a formal dataset/model run.
     import adam_mf.training.engine as e
