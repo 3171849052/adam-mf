@@ -15,7 +15,7 @@ from adam_mf.runtime.scheduler import selected_gpus,simulation
 
 def test_remaining_experiment_parameters_unchanged():
     import yaml
-    before=yaml.safe_load((ROOT/'docs/baseline/experiment.before.yaml').read_text());now=load_config()
+    before=yaml.safe_load((ROOT/'tests/fixtures/experiment_baseline.yaml').read_text());now=load_config()
     for method in ('adam-no-noise','momentum-no-noise'):
         before['methods'].pop(method)
         assert method not in now['methods']
@@ -83,21 +83,6 @@ def test_simulated_120_mixed_tasks_respect_family_capacity():
     assert seen=={0,1,2,3} and len(set(completed))==120 and not active
 
 
-def test_selected_interpreter_has_no_implicit_fallback(tmp_path):
-    import os
-    script=f'adam_mf_root="{ROOT}"; source "{ROOT}/scripts/python.sh"; printf "%s" "$adam_mf_python"'
-    env=dict(os.environ,ADAM_MF_PYTHON='/nonexistent/python')
-    assert subprocess.run(['bash','-c',script],env=env,capture_output=True).returncode!=0
-    env['ADAM_MF_PYTHON']=str(Path(__import__('sys').executable))
-    r=subprocess.run(['bash','-c',script],env=env,text=True,capture_output=True)
-    assert r.returncode==0 and r.stdout==env['ADAM_MF_PYTHON']
-    # A Conda installation without adam-mf must fail even when another Python works.
-    conda=tmp_path/'conda';conda.write_text('#!/bin/sh\nexit 1\n');conda.chmod(0o755)
-    env.pop('ADAM_MF_PYTHON');env['PATH']=str(tmp_path)+':/usr/bin:/bin'
-    r=subprocess.run(['bash','-c',script],env=env,text=True,capture_output=True)
-    assert r.returncode!=0 and 'setup_env.sh' in r.stderr
-
-
 def test_production_scheduler_refills_and_stops_on_failure(tmp_path,monkeypatch):
     import adam_mf.runtime.scheduler as s
     import adam_mf.training.engine as engine
@@ -148,7 +133,9 @@ def test_stop_orphan_workers_checks_pid_identity(tmp_path,monkeypatch):
     monkeypatch.setattr(launcher,'local_path',lambda _:tmp_path)
     atomic_json(tmp_path/'current.json',dict(pid=10,process_token='old',run_dir='synthetic'))
     atomic_json(tmp_path/'status.json',dict(status='running',tasks={'valid':dict(status='running',pid=20,process_token='valid'),'stale':dict(status='running',pid=30,process_token='stale')}))
-    monkeypatch.setattr(launcher,'alive',lambda record:record.get('process_token')=='valid')
+    import adam_mf.runtime.management as management
+    monkeypatch.setattr(management,'local_path',lambda _:tmp_path)
+    monkeypatch.setattr(management,'alive',lambda record:record.get('process_token')=='valid')
     sent=[];monkeypatch.setattr(launcher.os,'kill',lambda pid,sig:sent.append((pid,sig)))
     launcher.stop();assert sent==[(20,signal.SIGTERM)]
 

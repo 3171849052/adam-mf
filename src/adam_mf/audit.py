@@ -52,9 +52,8 @@ def write_csv(p,rows,fields=None):
     w=csv.DictWriter(out,fieldnames=fields or list(rows[0]));w.writeheader();w.writerows(rows)
     atomic_text(p,out.getvalue())
 def code_hashes():
-    paths=list((ROOT/'src').rglob('*.py'))+list((ROOT/'scripts').glob('*.py'))
-    paths += list((ROOT/'scripts').glob('*.sh'))
-    paths += list(ROOT.glob('*.sh')) + [ROOT/p for p in ('pyproject.toml','environment.yml','requirements.lock','config/assets.lock.json')]
+    paths=list((ROOT/'src').rglob('*.py'))
+    paths += [ROOT/p for p in ('adam-mf','pyproject.toml','environment.yml','requirements.lock','config/assets.lock.json')]
     paths += list((ROOT/'config/tokenizer').glob('*.json'))
     return {str(p.relative_to(ROOT)):file_hash(p) for p in sorted(paths)}
 def verify_assets(config=None):

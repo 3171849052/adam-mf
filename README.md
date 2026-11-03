@@ -1,153 +1,91 @@
 # adam-mf
 
-| 配置名称                        | 方法                                            |
-| ------------------------------- | ----------------------------------------------- |
-| `adam-iid`                    | Adam + IID 高斯噪声                             |
-| `momentum-iid`                | Momentum + IID 高斯噪声                         |
-| `adam-mf-sgd-b2lt`            | Adam + SGD workload B²LT                       |
-| `adam-mf-sgd-stp-b2lt`        | Adam + STP 缩放裁剪 + SGD workload B²LT        |
-| `stpex-mf-momentum-bias-b2lt` | STP-EX + bias-corrected Momentum workload B²LT |
-| `momentum-mf-momentum-b2lt`   | Momentum + Momentum workload B²LT              |
+研究在固定隐私预算下，独立高斯噪声（IID）与 B²LT 矩阵机制产生的相关噪声，如何影响 Adam、Momentum 和 STP-EX 的训练表现。项目比较 **6 种方法 × 2 个任务 × 10 个随机种子 = 120 个独立训练任务**，只执行冻结参数的正式实验，不搜索或自动调整超参数。
 
-`config/experiment.yaml` 是实验参数的配置。
+`config/experiment.yaml` 是正式实验参数的唯一权威来源，`config/assets.lock.json` 固定数据、模型和预处理内容；下载与训练分离，训练只读取本地资产。
 
-## 系统要求
+## 六种方法
 
-- Linux x86_64、Bash、Conda、Python 3.11。
-- 默认使用物理 GPU **0、1、2、3**，四张都必须存在。
-- PyTorch `2.13.0+cu126`、Torchvision `0.28.0+cu126`；安装依赖见 `requirements.lock`。
-- NVIDIA Driver 必须支持所安装 PyTorch 的 CUDA 12.6 runtime。安装后逐卡真实 CUDA 运算检查决定能否运行；不要求单独安装同版本 CUDA Toolkit。当前验收机器为 Driver 570.133.20、四张 12 GiB RTX 3080 Ti。
-- 下载阶段需要访问 Toronto、Hugging Face 和软件包索引；训练进程只加载本地文件并设置离线变量。
-- 为环境、安装缓存、数据、模型和实验检查点预留足够磁盘空间。120 个检查点可能远大于原始资产，运行前请用 `df -h .` 查看磁盘。
+| 配置名称                        | 更新与噪声机制                                                 |
+| ------------------------------- | -------------------------------------------------------------- |
+| `adam-iid`                    | Adam，原空间裁剪，IID 高斯噪声                                 |
+| `momentum-iid`                | Momentum，原空间裁剪，IID 高斯噪声                             |
+| `adam-mf-sgd-b2lt`            | Adam，原空间裁剪，SGD workload 的 B²LT 噪声                   |
+| `adam-mf-sgd-stp-b2lt`        | Adam，STP 缩放空间裁剪，SGD workload 的 B²LT 噪声             |
+| `stpex-mf-momentum-bias-b2lt` | STP-EX，缩放空间裁剪，偏差校正 Momentum workload 的 B²LT 噪声 |
+| `momentum-mf-momentum-b2lt`   | Momentum，原空间裁剪，Momentum workload 的 B²LT 噪声          |
 
-## Conda 环境安装
+Workload（工作负载矩阵）描述梯度历史如何进入累计更新；B²LT 根据它构造时间相关噪声。STP 使用由优化器状态确定、在逻辑批次内冻结的逐坐标尺度进行裁剪，再按各方法定义完成更新。各方法的公式和调用顺序由 `src/adam_mf/optimizers/`、`privacy/` 和 `training/` 实现。
 
-执行：
+## 数据、模型与核心参数
+
+| 项目                | CV                                | NLP                                  |
+| ------------------- | --------------------------------- | ------------------------------------ |
+| 数据集              | CIFAR-100                         | SST-2                                |
+| 模型                | ViT-Tiny，patch 16，输入 224      | BERT-Tiny，序列长度 128              |
+| 正式训练 / 评价样本 | 官方训练集 50,000 / 测试集 10,000 | 固定分层划分 62,000 / 官方验证集 872 |
+| 训练轮数 / 优化步数 | 5 / 250                           | 5 / 310                              |
+| 物理 / 逻辑批次     | 250 / 1,000                       | 1,000 / 1,000                        |
+| 精度与训练范围      | FP32，全参数微调                  | FP32，全参数微调                     |
+
+十个正式种子为 `20261111`–`20261120`，划分种子为 `20261008`。每次训练目标为 ε=8、δ=1e-5，采用 GDP（高斯差分隐私）校准、add/remove zero-out 邻接，不使用抽样放大。公共参数 β₁=0.9、β₂=0.999、Adam eps=1e-8、weight decay=0；各方法的学习率、裁剪阈值和 STP `eps_scale` 以 YAML 中的原始冻结值为准。
+
+预处理还保留原协议中的搜索验证划分以验证数据一致性；正式训练的取样范围按上表执行。CV 使用固定协议的随机裁剪、水平翻转和模型归一化；NLP 使用固定分词器、padding 与截断。预训练骨干及按种子初始化的分类头在配对比较中核对一致性。
+
+## 实验内部流程
+
+1. 检查解释器、全部锁定依赖及 `pip check`，核对 NVIDIA Driver、PyTorch CUDA Runtime 和指定物理 GPU，逐卡执行真实 CUDA 运算并验证 UUID。
+2. 下载固定版本的数据和模型，在 CPU/FP64 上按原初值和 L-BFGS 优化生成缺失矩阵。复用已验证矩阵，不重新求解；校验数据、模型、矩阵、分词结果和划分的 SHA-256。
+3. 执行全部自动化测试，生成 120 项任务计划并模拟 GPU 调度。任何阶段失败都会停止，预检查通过才派发正式任务。
+4. 每个训练逻辑步冻结必要尺度，通过 Ghost Clipping 计算裁剪后的梯度，累积物理批次，按原顺序加入 IID 或在线 B²LT 噪声并执行对应优化器更新。每轮评价，完整逻辑步保存检查点。
+5. 逐任务验证结果和资产身份；全部任务完成且最终审计通过后汇总统计。
+
+## 一键部署与启动
+
+前提：Linux x86_64、Bash、可调用的 Conda、Python 3 引导解释器（系统或 Conda 基础解释器）、支持 CUDA 12.6 Runtime 的 NVIDIA Driver。默认物理 GPU 为 **0、1、2、3，四张都必须存在**。下载阶段需访问 Toronto、Hugging Face 和依赖包索引，并为环境、数据和 120 个检查点预留磁盘空间。
 
 ```bash
 git clone https://github.com/3171849052/adam-mf.git
 cd adam-mf
-bash scripts/setup_env.sh
+./adam-mf run
 ```
 
-脚本创建独立的 `adam-mf` 环境，从 `environment.yml` 引用的 `requirements.lock` 安装固定依赖，安装本项目，并检查依赖、PyTorch、CUDA、四张 GPU，生成 `logs/setup_environment_report.json`。全新环境安装需要下载 CUDA/PyTorch 大包，请等待日志输出。
+无需手动激活 Conda。入口自动定位仓库和名为 `adam-mf` 的环境，通过环境内 Python 的绝对路径及仓库 `src/` 加载源码。仅当环境完全不存在时，使用 `environment.yml` 引用 `requirements.lock` 创建环境；**已有环境只检查，不安装、升级或修复**。Python、缺包、版本差异、依赖冲突会列出后退出；Conda 安装失败会保留现场。未找到 Conda 时提示先安装。
 
-## GPU 设置
+环境检查成功后，协调器脱离终端在后台执行资产准备、完整预检查与正式实验。部署及运行信息见 `logs/pipeline.log`。无需手动另行安装同版本 CUDA Toolkit，是否可运行以真实 CUDA 检查为准。
 
-```yaml
-runtime:
-  gpu_ids: [0, 1, 2, 3]
-  cv_workers_per_gpu: 1
-  nlp_workers_per_gpu: 2
-  max_parallel_tasks: 8
-  min_free_memory_mb: {cv: 10000, nlp: 5000}
-  poll_seconds: 3
-  resume: true
-  stop_on_error: true
-  checkpoint_every_steps: 1
-```
+## 状态、停止与恢复
 
 ```bash
-nvidia-smi --query-gpu=index,uuid,name,memory.total,memory.free --format=csv
-watch -n 3 nvidia-smi
+./adam-mf status
+./adam-mf stop
+./adam-mf run
 ```
 
-可修改 `gpu_ids` 中的物理编号并相应限制全局并发；指定的所有卡都必须存在。默认最多 8 个进程，每卡最多 1 个 CV 进程或 2 个 NLP 进程（由 `cv_workers_per_gpu` / `nlp_workers_per_gpu` 控制），两类任务不混用同一张卡，CV 和 NLP 共享队列及 GPU 资源锁。卡空闲后自动补位，空闲显存不足就等待，不改变 batch size；`stop_on_error: true` 时失败会停止派发并通知其他 worker 在完整逻辑步保存检查点。
+`status` 显示当前运行、任务进度、物理 GPU 和日志；`stop` 验证 PID 的进程身份后请求安全停止，worker 在下一个完整逻辑步保存检查点。两条命令仅依赖 Python 标准库，即使 Conda 或项目依赖损坏也可使用。
 
-每个 worker 设置 `CUDA_VISIBLE_DEVICES=<物理编号>` 和 `CUDA_DEVICE_ORDER=PCI_BUS_ID`，内部只使用 `cuda:0`，并核对 CUDA 实际 UUID。例如 `CUDA_VISIBLE_DEVICES=2` 时，`cuda:0` 必须对应物理 GPU 2。任务日志、`gpu_mapping.json`、状态和逐种子结果保留物理编号、UUID、型号、逻辑设备；GPU 遥测持续记录显存。
+再次 `run` 恢复上次未完成的正式运行，逐项验证并跳过已有有效结果。检查点保留模型、优化器、逻辑步、数据加载器、Python/NumPy/CPU/CUDA 随机状态和噪声状态。恢复要求配置、代码、环境、数据、模型、矩阵、Driver 和 GPU UUID 一致，有检查点的任务固定回原物理卡。升级代码后旧运行可能拒绝恢复，必须恢复原运行版本才能继续原检查点。
 
-## 数据集、模型和矩阵
+已完成实验不会自动再次执行。明确创建独立的新实验并保留旧记录和检查点：
 
 ```bash
-./generate_matrices.sh
-./download_assets.sh
-./prepare_data.sh
-./verify_assets.sh
+./adam-mf run --new-run
 ```
 
-`generate_matrices.sh` 在 CPU/FP64 上从规定初值计算 6 组 B²LT 和 2 组 IID 矩阵，保存到 `assets/matrices/`；不需要旧仓库或矩阵压缩包。新机器上的 `download_assets.sh` / `start.sh` 也会自动完成此步骤。已有有效计算结果时只校验并复用，不重复求解。详细公式和审计见 [docs/matrix_generation.md](docs/matrix_generation.md)。
+运行锁阻止重复协调器；worker 继承运行锁和 GPU 独占锁，协调器退出后仍防止重复派发。默认每卡最多 1 个 CV 或 2 个 NLP 任务，不混用任务族，全局最多 8 个任务；显存不足则等待，不更改批次。退出终端不影响后台运行。
 
-从旧版打包矩阵升级，或明确需要重新计算时，执行 `./generate_matrices.sh --rebuild`，然后 `./download_assets.sh`、`./prepare_data.sh` 刷新资产清单。重建会改变资产身份，不能用于继续旧检查点；旧实验结果保留，新训练使用 `./start.sh --new-run`。
+## 结果目录与解释
 
-也可直接执行 `check.sh` 或 `start.sh`：发现缺失文件时自动下载和准备。已有完整资产时 `check.sh` 只检查；损坏文件必须通过下载入口明确修复。`verify_assets.sh` 始终只做离线验证。
+正式运行位于 `outputs/runs/<run_id>/`：
 
-| 资产           | 固定来源 / 版本                                                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CIFAR-100      | [Toronto 官方 Python 归档](https://www.cs.toronto.edu/~kriz/cifar.html)，2010-02-20；备用镜像必须具有相同 SHA-256                                                                                                          |
-| SST-2          | [nyu-mll/glue](https://huggingface.co/datasets/nyu-mll/glue/tree/bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2)，commit `bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c`                                                       |
-| ViT-Tiny       | [timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k](https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/tree/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106)，commit `7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106` |
-| BERT-Tiny      | [prajjwal1/bert-tiny](https://huggingface.co/prajjwal1/bert-tiny/tree/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837)，commit `6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837`                                                       |
-| B²LT 计算矩阵 | 按 exp16a 的 L-BFGS 求解并保存；CV T=250、NLP T=310                                                                                                                                        |
+| 文件 / 目录                                                         | 内容                                                       |
+| ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `config_snapshot.yaml`、`run_manifest.json`、`task_plan.json` | 配置快照、代码与资产身份、任务计划                         |
+| `status.json`、`logs/`                                          | 运行状态、逐任务日志                                       |
+| `checkpoints/<task_id>/`                                          | 可恢复检查点、逐轮指标、逐步诊断、GPU 映射                 |
+| `per_seed/{cv,nlp}/`、`formal_per_seed.csv`                     | 逐种子结果，完整正式运行共 120 条                          |
+| `summary.csv`                                                     | 各方法十种子均值、样本标准差（ddof=1）、95% Student-t 区间 |
+| `paired_differences.csv`                                          | 相同种子方法间的右减左差值及区间，未做多重比较校正         |
+| `final_report.md`、`figures/`、`audit/`                       | 报告、图形、环境/哈希/测试/调度及最终完整性审计            |
 
-## 一键启动与预检查
-
-环境和资产准备好后：
-
-```bash
-./check.sh
-./start.sh
-```
-
-`start.sh` 本身会自动执行：环境/Conda解释器验证 → 四 GPU CUDA 运算检查 → 下载和校验原始资产 → 预处理 → 全部资产 SHA-256 校验 → 含 CUDA 的算法测试 → 生成 120 个任务 → 四 GPU 统一调度 → 汇总与最终审计。
-
-启动立即返回，准备过程也在后台。只有预检查全部通过才启动训练。无需在每次 SSH 会话激活环境。
-
-只验证工程、不运行正式训练：
-
-```bash
-./start.sh --dry-run --wait
-```
-
-该命令使用真实四 GPU 做 CUDA 检查、运行测试、生成 120 项计划和模拟调度记录，但启动的正式训练任务数为零。模拟调度单独执行：
-
-```bash
-conda run --no-capture-output -n adam-mf python -m adam_mf.cli simulate
-```
-
-模拟不证明真实硬件通过；真实四卡结果写入环境报告。当前验收详情见 [docs/engineering_validation.md](docs/engineering_validation.md)。
-
-## 后台运行、状态和恢复
-
-```bash
-./status.sh
-tail -f logs/pipeline.log
-./stop.sh
-```
-
-协调器通过新会话、脱离 stdin 和日志重定向运行，退出 SSH 后继续执行。运行锁会阻止重复启动；PID 加 `/proc` 进程身份避免向复用 PID 误发信号。worker 继承运行锁和 GPU 独占锁，协调器异常退出时仍阻止重复启动。
-
-`stop.sh` 请求安全停止，使用 `status.sh` 等待所有任务退出。重新执行 `./start.sh` 自动恢复上次未完成的正式运行，已完成任务逐个验证后跳过。检查点只在完整 logical step 提交，保存模型、优化器、epoch、采样/加载器、Python/NumPy/CPU/CUDA RNG、噪声生成器与 B²LT 状态、指标；恢复不会再次更新已提交逻辑步。
-
-恢复前必须匹配配置、代码、依赖环境、数据、模型、矩阵、Driver 和 GPU UUID；有检查点的任务固定回原物理卡，避免迁移到不同硬件；发现变化就停止，不静默修复旧实验。确认需要另开新实验时使用 `./start.sh --new-run`，不要删除身份检查。`--wait` 可让终端等待退出码，默认全程后台。
-
-## 实验配置
-
-`config/experiment.yaml` 包含十个正式种子 `20261111`–`20261120`、固定划分种子 `20261008`、六方法各任务的学习率/裁剪阈值/STP eps_scale、Adam 公共参数、隐私预算、batch、轮数和步数。CV physical batch=250，NLP=1000，logical batch=1000；均为五轮，CV=250 步、NLP=310 步。公共 Adam 参数为 beta1=0.9、beta2=0.999、eps=1e-8；单次 DP 目标 ε=8、δ=1e-5。各方法的 learning_rate、clip 和 STP eps_scale 均按任务冻结，具体值只以 YAML 为准。
-
-改造前完整配置保存在 `docs/baseline/experiment.before.yaml`。字段差异验收命令：
-
-```bash
-conda run --no-capture-output -n adam-mf python scripts/check_config.py
-```
-
-允许移除 `adam-no-noise`、`momentum-no-noise` 及运行管理字段变化，其余实验参数必须保持一致；检查报告在 `docs/config_preservation.json`。依赖定义中 `pyproject.toml` 声明项目直接依赖，`requirements.lock` 固定相容的完整依赖闭包，`environment.yml` 引用该锁文件，不再另列不同版本。
-
-## 结果解释
-
-每次运行写入 `outputs/runs/<run_id>/`：
-
-```text
-config_snapshot.yaml   run_manifest.json   status.json
-task_plan.json         checkpoints/       per_seed/{cv,nlp}/
-formal_per_seed.csv    summary.csv        paired_differences.csv
-final_report.md        figures/           logs/
-audit/environment_report.json            audit/asset_hashes.json
-audit/config_hash.json                   audit/code_hash.json
-audit/gpu_report.json                    audit/final_audit.json
-```
-
-- `formal_per_seed.csv`：逐任务准确率、交叉熵、真实隐私预算、训练时间、峰值显存及物理 GPU 信息。正式完整结果应为 CV 60、NLP 60，共 120 条。
-- `summary.csv`：每任务每方法十种子准确率均值、**样本标准差（ddof=1）**、95% Student-t 置信区间，以及交叉熵和资源统计。
-- `paired_differences.csv`：相同种子方法之间的右减左差异与区间；配对前核对初始化、分类头、顺序和增强轨迹，未做多重比较校正。
-- 六种 DP 方法记录各自实际 ε 和 δ。单次 ε 不能直接作为多个种子/方法发布的组合预算。
-- `final_report.md` 和图形仅使用本次新训练结果。只有完整 120 项、每组恰好十个种子、资产/结果/随机轨迹审计全部通过，状态才是 `completed`。
+主要指标为准确率、交叉熵；同时记录实际 ε、δ、训练时间和峰值显存。只有完整 120 项及最终审计通过才标记 `completed`。

@@ -82,11 +82,12 @@ def test_configurable_family_capacity():
         with pytest.raises(ValueError):validate(bad)
 
 
-def test_training_code_identity_excludes_tests_and_docs():
+def test_training_code_identity_includes_entrypoint_excludes_tests():
     from adam_mf.audit import code_hashes
     hashes=code_hashes()
     assert 'src/adam_mf/training/engine.py' in hashes
-    assert not any(p.startswith(('tests/','docs/')) for p in hashes)
+    assert 'adam-mf' in hashes
+    assert not any(p.startswith('tests/') for p in hashes)
 
 
 def test_nlp_scheduler_shares_one_gpu_lock(tmp_path,monkeypatch):

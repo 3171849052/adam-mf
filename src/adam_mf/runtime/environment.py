@@ -31,7 +31,7 @@ def dependency_closure(requirements):
 def check_versions():
     failures=[];versions={}
     project=tomllib.loads((ROOT/'pyproject.toml').read_text())
-    if sys.version_info[:2]!=(3,11):failures.append('Python 3.11 required')
+    if sys.version_info[:2]!=(3,11):failures.append(f'Python {platform.python_version()} installed, Python 3.11 required')
     locked=[line.strip() for line in (ROOT/'requirements.lock').read_text().splitlines() if line.strip() and not line.startswith(('#','--'))]
     for spec in list(project['project']['dependencies'])+locked:
         r=Requirement(spec)
@@ -48,14 +48,16 @@ def check_versions():
 
 def environment_report(config, cuda_tests=True):
     from adam_mf.runtime.scheduler import selected_gpus
+    versions=check_versions()
+    check=subprocess.run([sys.executable,'-m','pip','check'],text=True,capture_output=True)
+    if check.returncode:raise RuntimeError('pip check failed: '+check.stdout+check.stderr)
     import torch
-    versions=check_versions();gpus=selected_gpus(config['runtime'])
+    gpus=selected_gpus(config['runtime'])
     result=dict(python=platform.python_version(),python_executable=sys.executable,
                 conda_environment=Path(sys.prefix).name if (Path(sys.prefix)/'conda-meta').is_dir() else None,conda_prefix=sys.prefix,
                 shell_conda_environment=os.environ.get('CONDA_DEFAULT_ENV'),shell_conda_prefix=os.environ.get('CONDA_PREFIX'),
                 interpreter_environment=Path(sys.prefix).name,packages=versions,cuda_runtime=torch.version.cuda,
                 cuda_available=torch.cuda.is_available(),gpus=gpus)
-    check=subprocess.run([sys.executable,'-m','pip','check'],text=True,capture_output=True)
     result['pip_check']=dict(exit_code=check.returncode,output=(check.stdout+check.stderr).strip())
     if not torch.cuda.is_available():raise RuntimeError('PyTorch CUDA is unavailable')
     if cuda_tests:

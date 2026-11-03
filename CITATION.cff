@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "请引用此软件仓库，并在研究中记录实际使用的提交版本。"
+type: software
+title: adam-mf
+version: 0.1.0
+authors:
+  - name: "3171849052"
+    website: "https://github.com/3171849052"
+url: "https://github.com/3171849052/adam-mf"
+repository-code: "https://github.com/3171849052/adam-mf"

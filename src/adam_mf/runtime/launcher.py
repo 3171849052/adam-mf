@@ -16,18 +16,24 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
     lock=os.open(logs/'pipeline.lock',os.O_CREAT|os.O_RDWR,0o600)
     try:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError:raise RuntimeError('A pipeline or its worker is already running; use ./status.sh')
+        except BlockingIOError:raise RuntimeError('A pipeline or its worker is already running; use ./adam-mf status')
         last=logs/'last_formal.json';run=None
-        if not dry_run and not new_run and config['runtime']['resume'] and last.exists():
+        if not dry_run and not new_run and last.exists():
             candidate=local_path(read_json(last)['run_dir'])
             status=read_json(candidate/'status.json')['status'] if (candidate/'status.json').exists() else 'created'
+            if status=='completed':
+                print(f'实验已完成：{candidate}。另开实验请使用 ./adam-mf run --new-run。')
+                return 0
+            if not config['runtime']['resume']:
+                print('未完成实验的自动恢复已禁用。另开实验请使用 ./adam-mf run --new-run。',file=sys.stderr)
+                return 2
             if status!='completed':
                 # Historical snapshots may use an older schema. Compare their
                 # exact contents before applying any current-schema validation.
                 snapshot=yaml.load((candidate/'config_snapshot.yaml').read_text(),Loader=StrictLoader)
                 if json_hash(snapshot)!=json_hash(config) or read_json(candidate/'run_manifest.json')['code_sha256']!=code_hashes():
                     print(f'Resume refused: configuration/code changed for {candidate.name}.\n'
-                          '使用当前版本开始独立实验：./start.sh --new-run（保留旧运行和检查点）。\n'
+                          '使用当前版本开始独立实验：./adam-mf run --new-run（保留旧运行和检查点）。\n'
                           '若要继续旧检查点，请恢复该运行原来的代码和配置；不会自动迁移检查点。',file=sys.stderr)
                     return 2
                 run=candidate
@@ -48,6 +54,7 @@ def launch(config_path=None,dry_run=False,wait=False,new_run=False):
         record=dict(pid=proc.pid,process_token=process_token(proc.pid),run_dir=str(run.relative_to(ROOT)),dry_run=dry_run)
         atomic_json(logs/'current.json',record)
         if not dry_run:atomic_json(last,record)
+        atomic_json(ROOT/'.adam-mf-current.json',dict(current=str((logs/'current.json').relative_to(ROOT))))
         print(f'PID {proc.pid} | {run.relative_to(ROOT)} | '+('dry-run (no training)' if dry_run else 'formal pipeline'),flush=True)
     finally:os.close(lock)
     if wait:return proc.wait()
@@ -129,23 +136,31 @@ def pipeline(run,lock_fd,dry_run=False):
     finally:os.close(lock_fd)
 
 def status(config_path=None):
-    c=load_config(config_path);path=local_path(c['paths']['logs'])/'current.json'
-    if not path.exists():print('No pipeline has been started.');return
-    rec=read_json(path);run=local_path(rec['run_dir']);s=read_json(run/'status.json')
-    print(f'Run: {run.name}\nPID: {rec["pid"]} ({"alive" if alive(rec) else "exited"})\nState: {s["status"]}\nCompleted: {s.get("completed",0)}/{s.get("planned",0)}')
-    for job,v in s.get('tasks',{}).items():
-        if v['status'] in ('running','failed','paused'):print(f'  {job}: {v["status"]} GPU={v.get("gpu_id")} step={v.get("progress",{}).get("logical_step")} log={v.get("log")}')
-    if s.get('error'):print('Error:',s['error'])
+    from adam_mf.runtime.management import status as show
+    c=load_config(config_path)
+    return show(local_path(c['paths']['logs'])/'current.json')
+
 
 def stop(config_path=None):
-    c=load_config(config_path);p=local_path(c['paths']['logs'])/'current.json'
-    if not p.exists():print('No pipeline to stop.');return
-    rec=read_json(p)
-    if not alive(rec):
-        run=local_path(rec['run_dir']);state=read_json(run/'status.json');sent=0
-        for task in state.get('tasks',{}).values():
-            if task.get('status')=='running' and alive(task):
-                os.kill(task['pid'],signal.SIGTERM);sent+=1
-        print(f'Coordinator exited; graceful stop sent to {sent} surviving workers. Checkpoints are preserved.')
-        return
-    os.kill(rec['pid'],signal.SIGTERM);print('Graceful stop requested; workers checkpoint at the next logical step. Use ./status.sh to check exit.')
+    from adam_mf.runtime.management import stop as request_stop
+    c=load_config(config_path)
+    return request_stop(local_path(c['paths']['logs'])/'current.json')
+
+
+def check():
+    """Full preflight isolated from formal runs, pointers and completion status."""
+    config=load_config()
+    check_id=datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d-%H%M%S-%f')+f'-{os.getpid()}'
+    run=local_path(config['paths']['logs'])/'checks'/check_id
+    (run/'logs').mkdir(parents=True)
+    atomic_text(run/'config_snapshot.yaml',yaml.safe_dump(config,allow_unicode=True,sort_keys=False))
+    atomic_json(run/'run_manifest.json',dict(dry_run=True,identity=None,code_sha256=code_hashes()))
+    try:
+        with hash_session():preflight(run,config)
+        atomic_json(run/'task_plan.json',[dict(id=j.id,**j.values(),**j.parameters) for j in plan(config)])
+        print(f'完整预检查通过：{len(plan(config))} 个任务，未启动正式训练。报告：{run}')
+        return 0
+    except Exception as error:
+        atomic_json(run/'audit/preflight.json',dict(status='failed',error=str(error)))
+        print(f'预检查失败：{error}；报告：{run}',file=sys.stderr)
+        return 1

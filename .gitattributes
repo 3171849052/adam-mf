@@ -1,4 +1,5 @@
-*.sh text eol=lf
+adam-mf text eol=lf
 *.py text eol=lf
 *.yaml text eol=lf
-resources/*.tar.gz binary
+*.yml text eol=lf
+*.cff text eol=lf

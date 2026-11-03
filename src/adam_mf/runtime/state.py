@@ -3,13 +3,7 @@ from pathlib import Path
 from adam_mf.audit import atomic_json,read_json,json_hash,code_hashes,verify_assets
 from adam_mf.paths import ROOT,local_path
 
-def process_token(pid):
-    try:
-        fields=Path(f'/proc/{pid}/stat').read_text().rsplit(')',1)[1].split()
-        return None if fields[0]=='Z' else fields[19]
-    except (OSError,IndexError):return None
-
-def alive(record):return process_token(record['pid'])==record.get('process_token') and record.get('process_token') is not None
+from adam_mf.runtime.management import process_token,alive
 
 def environment():
     import sys,platform,importlib.metadata as m
