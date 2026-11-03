@@ -19,7 +19,7 @@ Momentum：m=beta1*m+(1-beta1)*g，p+=-lr*m，无偏差修正、无 Nesterov。A
 
 ## 发现的历史依赖和差异
 
-- exp16e/matrices.py 实际从 exp16a/results/matrices 载入，并对 phase1_acceptance.json 的哈希验收。本仓库仅复制 T=250/310、identity/IID、SGD/B²LT、Momentum/B²LT、Momentum-Bias/B²LT 的 8 组已验收 npz/json。元数据中的历史设计迭代轨迹仅是冻结矩阵来源证据；没有迁入任何矩阵优化代码。
+- exp16e/matrices.py 实际从 exp16a/results/matrices 载入，并对 phase1_acceptance.json 的哈希验收。本仓库现迁入 exp16a 的求解算法，独立计算 T=250/310、identity/IID、SGD/B²LT、Momentum/B²LT、Momentum-Bias/B²LT 共 8 组 npz/json，计算后冻结共享。详见 matrix_generation.md。
 - exp16e 数据资产实际在 runtime/assets，逐张量与 exp9 历史输入比较后生成。独立重建这些输入，并提供 verify-preprocessing 从本地原始 parquet、CIFAR 文件和 tokenizer 重新计算并逐张量/逐索引验证；不依赖 exp9。
 - CV 正式训练使用完整 50000 条训练数据，历史 CV 45000/5000 划分只保留为预处理审计。NLP 的 62000 条训练索引来自固定分层划分，再以 split_seed+1 做初始排列。各 trial 在其上以 Generator(seed).randperm 再排列；同一 epoch 顺序逐轮复用。
 - CV 增强：RandomResizedCrop(224, bicubic)、RandomHorizontalFlip、ToTensor、预训练 mean/std；每轮新建 DataLoader iterator，两名 spawn worker，Generator(seed) 跨 epoch 延续。NLP 使用 BertTokenizer（非 fast 替换），长度128、max_length padding、truncation；BERT dropout=.1/eager attention，seed+100000+logical_step。

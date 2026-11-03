@@ -91,18 +91,19 @@ def asset_lock(config):
         fcntl.flock(lock,fcntl.LOCK_EX);yield
 
 
-def manifests(config,prepared=False):
+def manifests(config,prepared=False,groups=None):
     c=catalog()
     for prefix,key in [('data/','data'),('model/','model'),('assets/matrices/','matrices')]:
+        if groups is not None and key not in groups:continue
         rows=[]
         for row in c['files']:
             if not row['path'].startswith(prefix):continue
             path=asset_path(row,config)
-            if row['kind']=='prepared':
-                if not prepared:continue
+            if row['kind'] in ('prepared','generated-matrix'):
+                if row['kind']=='prepared' and not prepared:continue
                 if not path.is_file():raise FileNotFoundError(path)
             elif not matches(path,row):raise ValueError(f'Pinned asset mismatch: {path}')
-            rows.append(dict(path=str(path.relative_to(ROOT)),bytes=path.stat().st_size,sha256=file_hash(path) if row['kind']=='prepared' else row['sha256']))
+            rows.append(dict(path=str(path.relative_to(ROOT)),bytes=path.stat().st_size,sha256=file_hash(path) if row['kind'] in ('prepared','generated-matrix') else row['sha256']))
         folder=local_path(config['paths']['data'] if key=='data' else config['paths']['matrices'] if key=='matrices' else str(local_path(config['paths']['cv_model']).parent.relative_to(ROOT)))
         atomic_json(folder/'manifest.json',dict(catalog_sha256=file_hash(CATALOG),files=rows,total_bytes=sum(r['bytes'] for r in rows)))
 
@@ -110,11 +111,11 @@ def manifests(config,prepared=False):
 def fetch_assets(config):
     c=catalog()
     with asset_lock(config):
-        bundle=c['matrix_bundle'];bundle_path=local_path(bundle['path'])
-        if not matches(bundle_path,bundle):raise ValueError('Frozen matrix distribution bundle missing/corrupt; restore resources/matrices-v1.tar.gz from repository. Never regenerate matrices.')
+        from adam_mf.privacy.matrix_design import prepare_matrices
+        prepare_matrices(local_path(config['paths']['matrices']))
         for row in c['files']:
             target=asset_path(row,config)
-            if row['kind']=='prepared' or matches(target,row):continue
+            if row['kind'] in ('prepared','generated-matrix') or matches(target,row):continue
             print(f'Prepare {target.relative_to(ROOT)}',flush=True)
             if row['kind']=='download':download(row['url'],target,row['bytes'],row['sha256'])
             elif row['kind']=='bundled':
@@ -128,7 +129,6 @@ def fetch_assets(config):
                     os.replace(tmp,target)
                 finally:
                     if os.path.exists(tmp):os.unlink(tmp)
-            elif row['kind']=='matrix-member':extract_member(bundle_path,row['member'],target,row)
             elif row['kind']=='cifar-member':
                 a=c['cifar_archive'];archive=local_path(config['paths']['data'])/'.downloads/cifar-100-python.tar.gz'
                 for url in [a['url']]+a.get('mirrors',[]):
@@ -146,13 +146,16 @@ def verify_assets(config=None,include_prepared=True):
         from adam_mf.config import load_config
         config=load_config()
     hashes={};c=catalog()
+    if any(r['kind']=='generated-matrix' for r in c['files']):
+        from adam_mf.privacy.matrix_design import verify_all
+        verify_all(config)
     for row in c['files']:
         path=asset_path(row,config)
-        if row['kind']=='prepared':
-            if not include_prepared:continue
+        if row['kind'] in ('prepared','generated-matrix'):
+            if row['kind']=='prepared' and not include_prepared:continue
             if not path.is_file() or path.is_symlink():raise ValueError(f'Missing prepared asset: {path}')
         elif not matches(path,row):raise ValueError(f'Pinned asset hash/size mismatch: {path}')
-        hashes[str(path.relative_to(ROOT))]=file_hash(path) if row['kind']=='prepared' else row['sha256']
+        hashes[str(path.relative_to(ROOT))]=file_hash(path) if row['kind'] in ('prepared','generated-matrix') else row['sha256']
     if include_prepared:
         from adam_mf.data.preprocessing import verify_prepared_content
         verify_prepared_content(config)

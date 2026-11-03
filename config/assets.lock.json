@@ -202,115 +202,67 @@
     },
     {
       "path": "assets/matrices/identity_iid_T250.npz",
-      "bytes": 2001230,
-      "sha256": "5efe4a751c2916ae17373cfbd717c0c595d72b482ee1b4c8ea3afc3de1f90a03",
-      "kind": "matrix-member",
-      "member": "identity_iid_T250.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/identity_iid_T250.json",
-      "bytes": 864,
-      "sha256": "f096e5d143d002611e288bc2ecdaa870c3c8529f8cd61acace83fb8674e99108",
-      "kind": "matrix-member",
-      "member": "identity_iid_T250.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/sgd_b2lt_T250.npz",
-      "bytes": 2001622,
-      "sha256": "a67784d759175af27baa5cdd2ce392f19beb67481148789f3850454c7f6f85a4",
-      "kind": "matrix-member",
-      "member": "sgd_b2lt_T250.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/sgd_b2lt_T250.json",
-      "bytes": 147160,
-      "sha256": "05183d2a7a93a23e14847f6f954207bdb24717de908f70f47cb25d4cdea616bd",
-      "kind": "matrix-member",
-      "member": "sgd_b2lt_T250.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum_b2lt_T250.npz",
-      "bytes": 2001622,
-      "sha256": "12382de4e2cb90216b15f57099fd544369b50715a9a0316523037913b67c730c",
-      "kind": "matrix-member",
-      "member": "momentum_b2lt_T250.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum_b2lt_T250.json",
-      "bytes": 147356,
-      "sha256": "c7e9ced189a942b7d127877289b4acc929c446cf741972940db85d14a7366a98",
-      "kind": "matrix-member",
-      "member": "momentum_b2lt_T250.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum-bias_b2lt_T250.npz",
-      "bytes": 2001622,
-      "sha256": "f788586c318d5c901973950945849852aa6ab18964d23ab64dbe259e88e5a819",
-      "kind": "matrix-member",
-      "member": "momentum-bias_b2lt_T250.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum-bias_b2lt_T250.json",
-      "bytes": 146924,
-      "sha256": "2af4076eca1de1aae9dd617f75846f83c4385580852f8e4dfe31d8e3a664c8fd",
-      "kind": "matrix-member",
-      "member": "momentum-bias_b2lt_T250.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/identity_iid_T310.npz",
-      "bytes": 3076430,
-      "sha256": "a38878110a6549d920d83d9772a2c2be82959a3ebc9dc2a8a8e687fd913a1cff",
-      "kind": "matrix-member",
-      "member": "identity_iid_T310.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/identity_iid_T310.json",
-      "bytes": 864,
-      "sha256": "d139b26409f59fba71e734d55081d1aa63f8652e84cc74491544508a280f8026",
-      "kind": "matrix-member",
-      "member": "identity_iid_T310.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/sgd_b2lt_T310.npz",
-      "bytes": 3076918,
-      "sha256": "2070e53ff406d8f38bac230f6c812f2f616580e449094f8986d82e5c1f7a280e",
-      "kind": "matrix-member",
-      "member": "sgd_b2lt_T310.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/sgd_b2lt_T310.json",
-      "bytes": 48151,
-      "sha256": "6cd673f7748709ed05e222de7259a2207fcd3a82e07fcb245276a37714e60be2",
-      "kind": "matrix-member",
-      "member": "sgd_b2lt_T310.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum_b2lt_T310.npz",
-      "bytes": 3076918,
-      "sha256": "ea9f642d22354c1133a3c75ee1af20721f3f00820d89e91d6e2e9821603e864e",
-      "kind": "matrix-member",
-      "member": "momentum_b2lt_T310.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum_b2lt_T310.json",
-      "bytes": 147887,
-      "sha256": "f502117691bf8f27f4bf6788ad1a6ce1fb83cf85b44bc8079244379de54e74ae",
-      "kind": "matrix-member",
-      "member": "momentum_b2lt_T310.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum-bias_b2lt_T310.npz",
-      "bytes": 3076918,
-      "sha256": "0ac7bd776f063a29fadc1c41261f5a6375bbf819e0ca39fcbcf8494a26490139",
-      "kind": "matrix-member",
-      "member": "momentum-bias_b2lt_T310.npz"
+      "kind": "generated-matrix"
     },
     {
       "path": "assets/matrices/momentum-bias_b2lt_T310.json",
-      "bytes": 147004,
-      "sha256": "0c3a1ed98d9087fa9ea15bdb9d4071f8d9c36f77f3ded3b73ef9b4bf511038ad",
-      "kind": "matrix-member",
-      "member": "momentum-bias_b2lt_T310.json"
+      "kind": "generated-matrix"
     },
     {
       "path": "model/vit-tiny/config.json",
@@ -320,11 +272,6 @@
       "url": "https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/resolve/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106/config.json"
     }
   ],
-  "matrix_bundle": {
-    "path": "resources/matrices-v1.tar.gz",
-    "bytes": 776606,
-    "sha256": "6e84b92685583296299d335749c502a15de2b566d685d9ad83ca778cf8ef724b"
-  },
   "cifar_archive": {
     "url": "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
     "bytes": 169001437,

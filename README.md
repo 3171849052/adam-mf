@@ -59,10 +59,15 @@ watch -n 3 nvidia-smi
 ## 数据集、模型和矩阵
 
 ```bash
+./generate_matrices.sh
 ./download_assets.sh
 ./prepare_data.sh
 ./verify_assets.sh
 ```
+
+`generate_matrices.sh` 在 CPU/FP64 上从规定初值计算 6 组 B²LT 和 2 组 IID 矩阵，保存到 `assets/matrices/`；不需要旧仓库或矩阵压缩包。新机器上的 `download_assets.sh` / `start.sh` 也会自动完成此步骤。已有有效计算结果时只校验并复用，不重复求解。详细公式和审计见 [docs/matrix_generation.md](docs/matrix_generation.md)。
+
+从旧版打包矩阵升级，或明确需要重新计算时，执行 `./generate_matrices.sh --rebuild`，然后 `./download_assets.sh`、`./prepare_data.sh` 刷新资产清单。重建会改变资产身份，不能用于继续旧检查点；旧实验结果保留，新训练使用 `./start.sh --new-run`。
 
 也可直接执行 `check.sh` 或 `start.sh`：发现缺失文件时自动下载和准备。已有完整资产时 `check.sh` 只检查；损坏文件必须通过下载入口明确修复。`verify_assets.sh` 始终只做离线验证。
 
@@ -72,7 +77,7 @@ watch -n 3 nvidia-smi
 | SST-2          | [nyu-mll/glue](https://huggingface.co/datasets/nyu-mll/glue/tree/bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2)，commit `bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c`                                                       |
 | ViT-Tiny       | [timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k](https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/tree/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106)，commit `7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106` |
 | BERT-Tiny      | [prajjwal1/bert-tiny](https://huggingface.co/prajjwal1/bert-tiny/tree/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837)，commit `6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837`                                                       |
-| B²LT 冻结矩阵 | 仓库自带 `resources/matrices-v1.tar.gz`；原 exp16a 验收字节，CV T=250、NLP T=310                                                                                                                                        |
+| B²LT 计算矩阵 | 按 exp16a 的 L-BFGS 求解并保存；CV T=250、NLP T=310                                                                                                                                        |
 
 ## 一键启动与预检查
 

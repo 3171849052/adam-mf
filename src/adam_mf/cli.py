@@ -6,8 +6,9 @@ from adam_mf.audit import verify_assets
 def main():
     parser=argparse.ArgumentParser(description='adam-mf: six frozen methods, ten formal seeds, offline only')
     sub=parser.add_subparsers(dest='command',required=True)
-    for cmd in ('start','status','stop','validate','plan','verify-assets','verify-preprocessing','download-assets','prepare-data','check','simulate'):
+    for cmd in ('start','status','stop','validate','plan','verify-assets','verify-preprocessing','download-assets','generate-matrices','prepare-data','check','simulate'):
         p=sub.add_parser(cmd);p.add_argument('--config',type=Path)
+        if cmd=='generate-matrices':p.add_argument('--rebuild',action='store_true')
         if cmd=='start':
             p.add_argument('--dry-run',action='store_true');p.add_argument('--wait',action='store_true');p.add_argument('--new-run',action='store_true')
     p=sub.add_parser('pipeline');p.add_argument('--run',type=Path,required=True);p.add_argument('--lock-fd',type=int,required=True);p.add_argument('--dry-run',action='store_true')
@@ -21,6 +22,14 @@ def main():
         from adam_mf.reporting.report import report
         c=load_config(args.run/'config_snapshot.yaml');print(report(args.run,c,plan(c),check_identity(args.run,c)));return 0
     c=load_config(args.config)
+    if args.command=='generate-matrices':
+        from adam_mf.assets import asset_lock,manifests
+        from adam_mf.paths import local_path
+        from adam_mf.privacy.matrix_design import prepare_matrices
+        with asset_lock(c):
+            prepare_matrices(local_path(c['paths']['matrices']),rebuild=args.rebuild)
+            manifests(c,groups=('matrices',))
+        return 0
     if args.command=='validate':print(f'Configuration valid; {len(plan(c))} formal jobs.');return 0
     if args.command=='plan':print(json.dumps([dict(id=j.id,**j.values(),**j.parameters) for j in plan(c)],indent=2));return 0
     if args.command=='verify-assets':print(f'Verified {len(verify_assets(c))} asset/manifest hashes.');return 0

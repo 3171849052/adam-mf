@@ -1,0 +1,170 @@
+{
+  "source": "3171849052/dp-adam-correlated:exp16a/matrices.py",
+  "source_sha256": "907e44b2107308d806d7c10b8c6cd773d6341de5fd2b5a80e19dbd75e0cd03d3",
+  "implementation_sha256": "bafff788d52feec1c2ecd82ec52ff4e35693abe32ff79922d4ee50c896729435",
+  "experiment_config_sha256": "e6a6f3aa98aec8930bd4765336ae3e1209df0d651a8a60f261e552b08af75595",
+  "matrix_count": 8,
+  "all_arrays_bitwise_equal": true,
+  "comparison_only_historical_inputs": true,
+  "matrices": [
+    {
+      "file": "identity_iid_T250.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "5efe4a751c2916ae17373cfbd717c0c595d72b482ee1b4c8ea3afc3de1f90a03",
+      "historical_sha256": "5efe4a751c2916ae17373cfbd717c0c595d72b482ee1b4c8ea3afc3de1f90a03",
+      "iterations": null,
+      "optimizer_success": null,
+      "message": null,
+      "seconds": 0.01347426907159388,
+      "objective": 5.000000000000001
+    },
+    {
+      "file": "identity_iid_T310.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "a38878110a6549d920d83d9772a2c2be82959a3ebc9dc2a8a8e687fd913a1cff",
+      "historical_sha256": "a38878110a6549d920d83d9772a2c2be82959a3ebc9dc2a8a8e687fd913a1cff",
+      "iterations": null,
+      "optimizer_success": null,
+      "message": null,
+      "seconds": 0.008857929846271873,
+      "objective": 5.000000000000001
+    },
+    {
+      "file": "momentum-bias_b2lt_T250.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "f788586c318d5c901973950945849852aa6ab18964d23ab64dbe259e88e5a819",
+      "historical_sha256": "f788586c318d5c901973950945849852aa6ab18964d23ab64dbe259e88e5a819",
+      "iterations": 1000,
+      "optimizer_success": false,
+      "message": "iteration limit",
+      "seconds": 144.2867003530264,
+      "objective": 6764.170258976721
+    },
+    {
+      "file": "momentum-bias_b2lt_T310.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "0ac7bd776f063a29fadc1c41261f5a6375bbf819e0ca39fcbcf8494a26490139",
+      "historical_sha256": "0ac7bd776f063a29fadc1c41261f5a6375bbf819e0ca39fcbcf8494a26490139",
+      "iterations": 1000,
+      "optimizer_success": false,
+      "message": "iteration limit",
+      "seconds": 240.57652860693634,
+      "objective": 6959.076218428171
+    },
+    {
+      "file": "momentum_b2lt_T250.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "12382de4e2cb90216b15f57099fd544369b50715a9a0316523037913b67c730c",
+      "historical_sha256": "12382de4e2cb90216b15f57099fd544369b50715a9a0316523037913b67c730c",
+      "iterations": 1000,
+      "optimizer_success": false,
+      "message": "iteration limit",
+      "seconds": 137.83842080202885,
+      "objective": 20.705827860684803
+    },
+    {
+      "file": "momentum_b2lt_T310.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "ea9f642d22354c1133a3c75ee1af20721f3f00820d89e91d6e2e9821603e864e",
+      "historical_sha256": "ea9f642d22354c1133a3c75ee1af20721f3f00820d89e91d6e2e9821603e864e",
+      "iterations": 1000,
+      "optimizer_success": false,
+      "message": "iteration limit",
+      "seconds": 200.05678195902146,
+      "objective": 22.05227285049118
+    },
+    {
+      "file": "sgd_b2lt_T250.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "a67784d759175af27baa5cdd2ce392f19beb67481148789f3850454c7f6f85a4",
+      "historical_sha256": "a67784d759175af27baa5cdd2ce392f19beb67481148789f3850454c7f6f85a4",
+      "iterations": 1000,
+      "optimizer_success": false,
+      "message": "iteration limit",
+      "seconds": 161.2183523189742,
+      "objective": 44.4990735350087
+    },
+    {
+      "file": "sgd_b2lt_T310.npz",
+      "arrays_bitwise_equal": true,
+      "max_abs": {
+        "A": 0.0,
+        "C": 0.0,
+        "D": 0.0,
+        "d": 0.0,
+        "covariance_clip1": 0.0
+      },
+      "generated_sha256": "2070e53ff406d8f38bac230f6c812f2f616580e449094f8986d82e5c1f7a280e",
+      "historical_sha256": "2070e53ff406d8f38bac230f6c812f2f616580e449094f8986d82e5c1f7a280e",
+      "iterations": 318,
+      "optimizer_success": false,
+      "message": "feasible line search stalled",
+      "seconds": 6.7946496738586575,
+      "objective": 46.552909100410346
+    }
+  ],
+  "validation": {
+    "non_data_tests_with_cuda": 114,
+    "data_tests": 3,
+    "total_passed": 117,
+    "asset_manifest_hashes_verified": 35,
+    "physical_gpus_checked": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "formal_jobs_planned": 120,
+    "formal_training_started": false,
+    "source_only_small_generation_passed": true
+  }
+}

@@ -1,4 +1,4 @@
-"""Load only accepted frozen matrices; no matrix optimization or search."""
+"""Load and validate computed matrices; solving happens during asset preparation."""
 import numpy as np
 from scipy.linalg import toeplitz
 from adam_mf.audit import file_hash,read_json
@@ -16,6 +16,7 @@ def workload(name,n,beta1):
 def load_matrix(folder,work,mechanism,n,beta1):
     path=folder/f'{work}_{mechanism}_T{n}.npz'
     meta=read_json(path.with_suffix('.json'))
+    if meta['sha256']!=file_hash(path):raise ValueError('Matrix file hash mismatch')
     with np.load(path,allow_pickle=False) as f:arrays={k:f[k].copy() for k in f.files}
     A,C,D,d=(arrays[k] for k in ('A','C','D','d'))
     if any(x.shape!=(n,n) for x in (A,C,D)) or not all(np.isfinite(x).all() for x in (A,C,D,d)):raise ValueError('Invalid matrix arrays')

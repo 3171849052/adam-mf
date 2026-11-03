@@ -1,6 +1,6 @@
 # 独立资产溯源与分发
 
-`config/assets.lock.json` 是下载与离线验证的可信清单，记录每个文件的 SHA-256 和字节数。`data/manifest.json`、`model/manifest.json`、`assets/matrices/manifest.json` 是生成的审计清单，不能通过修改它们绕过可信清单。
+`config/assets.lock.json` 是下载与离线验证的可信清单，固定下载文件的 SHA-256 和字节数，并声明生成资产。`data/manifest.json`、`model/manifest.json`、`assets/matrices/manifest.json` 是生成的审计清单，不能通过修改它们绕过可信清单。
 
 ## 数据
 
@@ -15,14 +15,12 @@
 - 原 cache 的 `tokenizer.json` / `tokenizer_config.json` 是本地生成版本，不能冒充模型仓库提供的文件，因此随代码保存在 `config/tokenizer/`，复制时按固定 SHA-256 校验。保留原 BERT pooler 和随机二分类头初始化；不下载替代分类器。
 - 预处理缓存采用原始文件推导的逐张量内容 SHA-256（包括 dtype、shape）验证；PyTorch ZIP 容器字节可能因生成位置而不同，因此生成清单另外记录实际缓存文件 SHA-256。恢复仍检查完整文件哈希，不能替换缓存。
 
-## 冻结矩阵
+## 计算矩阵
 
-没有核实到公开固定下载源。本仓库附带 `resources/matrices-v1.tar.gz`（普通 Git 二进制，非 LFS），自动校验、解包到 `assets/matrices/`，导师无需旧仓库。该包仅复制已有冻结字节，不包含重新优化的替代矩阵。归档及 16 个文件的大小和 SHA-256 都在可信清单中。
+矩阵不从压缩包读取。`./generate_matrices.sh` 迁入 exp16a 的数据无关 L-BFGS 求解；exp16e 原本加载 exp16a 的结果，本项目现在独立重算。详见 [matrix_generation.md](matrix_generation.md)。
 
-- CV：T=250；NLP：T=310。
-- 每个任务包含 `identity_iid`、`sgd_b2lt`、`momentum_b2lt`、`momentum-bias_b2lt` 的 `.npz` 和 `.json`。
-- 原 exp16e 实际读取的是 exp16a/results/matrices，且通过 exp16a/results/phase1_acceptance.json 验收哈希；已逐个核对。
-- `.npz` 保存 A、C、D、d 等冻结数组；对应 `.json` 保存生成与验收 metadata。B²LT 的原生成协议为数据无关 L-BFGS、memory=20、可行 Armijo 回溯；不保证每份 metadata 的优化 success 字段为 true，使用的是原验收通过的固定 iterate，而非本次重新求解。
-- 单文件明细（含实际字节数）见可信清单；合计原始 21099490 字节。分发本仓库时必须一并提供该归档，缺失或变更会停止启动。
+每个 T=250/310 保存 identity/IID 和 SGD、Momentum、Momentum-Bias/B²LT，共 8 组 NPZ/JSON。NPZ 保存 A、C、D、d、covariance_clip1；JSON 保存初值、选中参数、迭代轨迹、收敛状态、数值审计、生成代码/环境身份及 NPZ 哈希。生成后冻结供十种子共享，训练时才采样独立高斯 innovation。
+
+可信清单对数据和模型固定下载字节，对计算矩阵规定所需文件集合；矩阵使用生成配方、NPZ 哈希、可行性和数学恒等式验收，清单记录本次实际哈希。恢复身份继续绑定实际资产，不能以重新求解后的矩阵继续旧检查点。
 
 参考：[Toronto CIFAR](https://www.cs.toronto.edu/~kriz/cifar.html)、[GLUE 固定版本](https://huggingface.co/datasets/nyu-mll/glue/tree/bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c/sst2)、[ViT 固定版本](https://huggingface.co/timm/vit_tiny_patch16_224.augreg_in21k_ft_in1k/tree/7d3afdd0cf93ad84d986eb2d6bcc5812ebd0b106)、[BERT 固定版本](https://huggingface.co/prajjwal1/bert-tiny/tree/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837)。
